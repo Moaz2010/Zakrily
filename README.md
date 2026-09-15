@@ -1,9 +1,9 @@
-# Zakrely (ذاكريلي)
+# Zakrily (ذاكريلي)
 
 Prototype/MVP for Junior 4 (Prep 1), Unit 1 — English, Math, Science.
 
-See [`zakrely-prototype-prd.md`](zakrely-prototype-prd.md) for the product spec and
-[`zakrely-system-design.md`](zakrely-system-design.md) for the architecture, data model, API
+See [`zakrily-prototype-prd.md`](zakrily-prototype-prd.md) for the product spec and
+[`zakrily-system-design.md`](zakrily-system-design.md) for the architecture, data model, API
 contract, and task board.
 
 ## Stack
@@ -17,7 +17,7 @@ contract, and task board.
 ## Repo layout
 
 ```
-zakrely/
+zakrily/
 ├── backend/           # FastAPI app, Alembic migrations, offline CLI scripts
 ├── frontend/          # Next.js + Tailwind app
 └── content/           # Raw Unit 1 source material per subject, for ingestion
@@ -89,5 +89,5 @@ changes there require re-running codegen on the frontend.
 Phase 0 (contracts + scaffold) complete: schemas, stub routes with fixtures, DB models +
 Alembic migration setup, Next.js app with typed client + MSW mocks, offline CLI script
 skeletons for ingestion/generation/validation. See the task board in
-`zakrely-system-design.md` §7 for what's next (Phase 1: real DB-backed auth, quiz grading,
+`zakrily-system-design.md` §7 for what's next (Phase 1: real DB-backed auth, quiz grading,
 skill scoring, practice selection).

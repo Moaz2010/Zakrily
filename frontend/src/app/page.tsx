@@ -13,7 +13,7 @@ export default function HomePage() {
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
-      <h1 className="text-4xl font-bold">ذاكريلي — Zakrely</h1>
+      <h1 className="text-4xl font-bold">ذاكريلي — Zakrily</h1>
       <p className="max-w-md text-slate-600">
         Unit 1 for Junior 4 — English, Math, and Science, with quizzes that learn where you&apos;re strong and where
         you need practice.

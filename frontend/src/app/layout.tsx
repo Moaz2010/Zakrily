@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Zakrely | ذاكريلي",
+  title: "Zakrily | ذاكريلي",
   description: "Adaptive learning companion for Junior 4 students.",
 };
 

@@ -4,11 +4,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "Zakrely API"
+    app_name: str = "Zakrily API"
     environment: str = "development"
 
     # Supabase Postgres connection string (Session Pooler recommended for serverless/edge deploys)
-    database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/zakrely"
+    database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/zakrily"
 
     # Supabase project — used for Storage (math images) and optionally Supabase Auth
     supabase_url: str = ""

@@ -1,4 +1,4 @@
-# Zakrely (ذاكريلي) — Prototype/MVP Technical Plan & PRD
+# Zakrily (ذاكريلي) — Prototype/MVP Technical Plan & PRD
 
 **Scope of this version:** Junior 4 (Prep 1), Unit 1 — English, Math, Science. Web app.
 
@@ -6,7 +6,7 @@
 
 ## 1. Problem Statement
 
-Egyptian students rely heavily on private lessons and "centers" for exam prep, with no consistent, affordable way to track understanding or get instant feedback. Parents have no visibility into where a child is actually strong or weak. Zakrely replaces/supplements this with an always-available, adaptive-feeling tutor that tracks progress the way a parent would ("ذاكريلي" = it studies with/for you).
+Egyptian students rely heavily on private lessons and "centers" for exam prep, with no consistent, affordable way to track understanding or get instant feedback. Parents have no visibility into where a child is actually strong or weak. Zakrily replaces/supplements this with an always-available, adaptive-feeling tutor that tracks progress the way a parent would ("ذاكريلي" = it studies with/for you).
 
 ## 2. Goals (Prototype)
 

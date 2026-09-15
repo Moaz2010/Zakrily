@@ -1,4 +1,4 @@
-# Zakrely — System Design & Implementation Plan
+# Zakrily — System Design & Implementation Plan
 
 **Scope:** Junior 4, Unit 1 — English, Math, Science. Web app.
 **Team:** 3 people — **AI** (RAG + model features), **BE** (FastAPI + DB), **FE** (Next.js + UI).
@@ -53,7 +53,7 @@ graph TB
 ## 2. Repo Structure
 
 ```
-zakrely/
+zakrily/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py

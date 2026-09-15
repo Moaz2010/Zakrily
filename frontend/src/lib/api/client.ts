@@ -8,7 +8,7 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    const token = window.localStorage.getItem("zakrely_token");
+    const token = window.localStorage.getItem("zakrily_token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

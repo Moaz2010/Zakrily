@@ -1,4 +1,4 @@
-const TOKEN_KEY = "zakrely_token";
+const TOKEN_KEY = "zakrily_token";
 
 export function saveToken(token: string) {
   window.localStorage.setItem(TOKEN_KEY, token);
