@@ -1,14 +1,10 @@
 "use client";
-/**
- * Home screen — updated per user specifications:
- *   1. Header: Two separate pill elements (Left: 🔥20, Right: Avatar far right + text right-aligned)
- *   2. Weekly activity chart: Light background (#F0EDE6), title right-aligned, 23->28 left-to-right, 4-tier colored segments
- *   3. Exam reminder card: Dark background, mascot-calendar on LEFT, text on RIGHT right-aligned
- *   4. Subject cards: Horizontally scrollable row, reduced width (~25-30%) so 3rd card peeks at right edge
- */
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { subjectsApi, type SubjectOut } from "@/lib/api";
+import { curriculumSubjects, getSubject } from "@/lib/curriculum";
+import { HomeOverview } from "./HomeOverview";
+import styles from "./home.module.css";
 
 // ── Weekly activity data matching reference ──────────────────────────────────
 // Ascending left to right: 23 → 24 → 25 → 26 → 27 → 28
@@ -33,23 +29,23 @@ const SUBJECT_CONFIG: Record<string, {
 }> = {
   science: {
     bg: "bg-[#1E5C4A]", ring: "#2D8A6A",
-    label: "علوم", nextLesson: "الفضاء",
-    progress: 87, accuracy: 87, total: 4, completed: 1,
+    label: "علوم", nextLesson: getSubject("science")!.lessons[0].title,
+    progress: 0, accuracy: 0, total: getSubject("science")!.lessons.length, completed: 0,
   },
   math: {
     bg: "bg-[#6B2A28]", ring: "#C0504A",
-    label: "الرياضيات", nextLesson: "الكسور",
-    progress: 55, accuracy: 55, total: 4, completed: 3,
+    label: "الرياضيات", nextLesson: getSubject("math")!.lessons[0].title,
+    progress: 0, accuracy: 0, total: getSubject("math")!.lessons.length, completed: 0,
   },
   english: {
     bg: "bg-[#2A4A6B]", ring: "#3A6A8B",
-    label: "إنجليزي", nextLesson: "الحواس الخمس",
-    progress: 70, accuracy: 70, total: 3, completed: 2,
+    label: "إنجليزي", nextLesson: getSubject("english")!.lessons[0].title,
+    progress: 0, accuracy: 0, total: getSubject("english")!.lessons.length, completed: 0,
   },
 };
 
 export default function HomePage() {
-  const [subjects, setSubjects] = useState<SubjectOut[]>([]);
+  const [subjects, setSubjects] = useState<SubjectOut[]>(curriculumSubjects);
 
   useEffect(() => {
     subjectsApi.list().then(setSubjects).catch(console.error);
@@ -66,78 +62,9 @@ export default function HomePage() {
   ].filter(Boolean) as Array<typeof SUBJECT_CONFIG.science & { id: number; slug: string }>;
 
   return (
-    <div className="flex flex-col gap-4 bg-[#0E0E0E] min-h-screen px-4 pt-6">
+    <div className={styles.page}>
+      <HomeOverview week={WEEK_CHART} />
 
-      {/* ── Step 1: Header (Two separate pills, RTL aligned inside) ───────── */}
-      <header className="flex items-center justify-between gap-3" dir="ltr">
-        {/* Left pill: Flame icon + streak number */}
-        <div className="flex items-center gap-1.5 rounded-full bg-[#1A1A1A] px-3.5 py-2 shadow-sm flex-shrink-0 border border-white/5">
-          <span className="text-lg">🔥</span>
-          <span className="font-bold text-white text-sm">20</span>
-        </div>
-
-        {/* Right pill: Name + grade stacked and right-aligned, Avatar at far right */}
-        <div className="flex items-center justify-end gap-3 rounded-2xl bg-[#1A1A1A] px-4 py-2 shadow-sm flex-1 border border-white/5">
-          <div className="text-right">
-            <p className="font-bold text-white text-sm sm:text-base leading-tight">سلمى مدحت</p>
-            <p className="text-[#9A9A9A] text-xs">رابعة ابتدائي</p>
-          </div>
-          <div className="h-10 w-10 rounded-full bg-[#2A2A2A] border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-            <svg viewBox="0 0 24 24" className="h-6 w-6 text-[#8A8A8A]" fill="currentColor">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-            </svg>
-          </div>
-        </div>
-      </header>
-
-      {/* ── Step 2: Weekly activity chart card ───────────────────────────── */}
-      <section className="rounded-2xl bg-[#F0EDE6] p-4 shadow-sm">
-        {/* Title hugging the right edge */}
-        <p className="text-right text-[#1A1A1A] font-bold text-base mb-3">نشاط الأسبوع</p>
-        
-        {/* Bar chart: 23 → 28 ascending left to right */}
-        <div className="flex items-end justify-between gap-2 h-28 px-1" dir="ltr">
-          {WEEK_CHART.map((item) => (
-            <div key={item.day} className="flex flex-col items-center flex-1 h-full">
-              {/* Background capsule track */}
-              <div className="w-full flex-1 rounded-md bg-[#E2DED4] flex flex-col-reverse p-1 gap-1 overflow-hidden">
-                {item.segments.map((color, idx) => (
-                  <div
-                    key={idx}
-                    style={{ backgroundColor: color }}
-                    className="w-full h-4 rounded-[3px] flex-shrink-0"
-                  />
-                ))}
-              </div>
-              <span className="text-[#2A2A2A] text-xs font-semibold mt-1.5">{item.day}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Step 3: Exam reminder card ───────────────────────────────────── */}
-      <section className="relative rounded-2xl bg-[#1A1A1A] overflow-hidden p-4 flex items-center justify-between gap-3 shadow-sm border border-white/5" dir="ltr">
-        {/* Mascot on the LEFT */}
-        <div className="w-24 h-24 flex-shrink-0 relative flex items-end justify-center">
-          <img
-            src="/mascot-calendar.png"
-            alt="تذكير الامتحان"
-            className="w-full h-full object-contain object-bottom scale-110 translate-y-1"
-          />
-        </div>
-
-        {/* Text on the RIGHT, right-aligned, wrapping across up to 3 lines */}
-        <div className="flex-1 text-right">
-          <p className="text-white font-bold text-lg sm:text-xl leading-snug">
-            باقي ٣ أيام على<br />
-            امتحان العلوم، يلا<br />
-            نراجع
-          </p>
-        </div>
-      </section>
-
-      {/* ── Step 5: Subject cards (horizontally scrollable, reduced width) ── */}
       <div className="flex gap-3 overflow-x-auto pb-4 pt-1 no-scrollbar scroll-smooth" dir="ltr">
         {displaySubjects.map((sub) => (
           <Link key={sub.slug} href={`/lessons/${sub.slug}`} className="flex-shrink-0 w-[155px]">

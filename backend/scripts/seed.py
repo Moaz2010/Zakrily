@@ -1,4 +1,4 @@
-"""Seed baseline reference data: subjects and skill tags.
+"""Seed subjects, Unit 1 lesson names, and skill tags without overwriting content.
 
 Run once against a fresh DB (after `alembic upgrade head`):
     python -m scripts.seed
@@ -7,6 +7,8 @@ Run once against a fresh DB (after `alembic upgrade head`):
 from app.core.database import SessionLocal
 from app.models.question import SkillTag, SkillTagSlug
 from app.models.subject import Subject, SubjectSlug
+from app.models.lesson import Lesson
+from app.curriculum import SUBJECTS as CURRICULUM
 
 SUBJECTS = [
     (SubjectSlug.english, "اللغة الإنجليزية", "English"),
@@ -33,8 +35,24 @@ def run():
             if not db.query(SkillTag).filter(SkillTag.slug == slug).first():
                 db.add(SkillTag(slug=slug, label_ar=label_ar))
 
+        db.flush()
+        for subject in CURRICULUM:
+            subject_row = db.query(Subject).filter(Subject.slug == SubjectSlug(subject["slug"])).one()
+            for item in subject["lessons"]:
+                lesson = db.query(Lesson).filter(
+                    Lesson.subject_id == subject_row.id,
+                    Lesson.order_index == item["order"],
+                ).first()
+                if lesson:
+                    lesson.title = item["title"]
+                else:
+                    db.add(Lesson(
+                        subject_id=subject_row.id, order_index=item["order"],
+                        title=item["title"], objective="", is_published=False,
+                    ))
+
         db.commit()
-        print("Seeded subjects and skill tags.")
+        print("Seeded subjects, 16 Unit 1 lessons, and skill tags.")
     finally:
         db.close()
 

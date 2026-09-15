@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test:timer": "node --experimental-strip-types --test tests/study-timer.test.mjs",
+    "postinstall": "msw init public --save",
     "dev": "next dev",
     "build": "next build",
     "start": "next start"

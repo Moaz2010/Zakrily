@@ -3,6 +3,7 @@
  * Arabic fixture strings so RTL layout renders authentically in dev.
  */
 import { http, HttpResponse } from "msw";
+import { curriculumSubjects, getSubject, getCurriculumLesson, initialPath } from "@/lib/curriculum";
 
 const BASE =
   process.env.NEXT_PUBLIC_API_URL ??
@@ -14,48 +15,22 @@ const BASE =
 const FIXTURE_USER = { id: 1, name: "سلمى مدحت", email: "salma@example.com", role: "student" };
 const FIXTURE_TOKEN = { token: "mock-jwt-token", user: FIXTURE_USER };
 
-const FIXTURE_SUBJECTS = [
-  { id: 1, slug: "english", name_ar: "اللغة الإنجليزية", name_en: "English" },
-  { id: 2, slug: "math",    name_ar: "الرياضيات",        name_en: "Math"    },
-  { id: 3, slug: "science", name_ar: "العلوم",           name_en: "Science" },
-];
+const FIXTURE_SUBJECTS = curriculumSubjects;
 
-// Real lesson names from seed.py (AI-01)
-const PATH_BY_SUBJECT: Record<string, Array<{ lesson_id: number; order: number; title: string; status: string; score: number | null }>> = {
-  english: [
-    { lesson_id: 1, order: 1, title: "ما هي الحواس الخمس؟",           status: "completed", score: 90 },
-    { lesson_id: 2, order: 2, title: "العادات الصحية",                 status: "unlocked",  score: null },
-    { lesson_id: 3, order: 3, title: "وقت القصة – وجبة جحا الرائعة",  status: "locked",    score: null },
-  ],
-  math: [
-    { lesson_id: 4,  order: 1, title: "الأعداد الكبيرة! القيم المتغيرة (1)", status: "completed", score: 80 },
-    { lesson_id: 5,  order: 2, title: "الأعداد الكبيرة! القيم المتغيرة (2)", status: "completed", score: 75 },
-    { lesson_id: 6,  order: 3, title: "أشكال متعددة لكتابة الأعداد (1)",     status: "unlocked",  score: null },
-    { lesson_id: 7,  order: 4, title: "أشكال متعددة لكتابة الأعداد (2)",     status: "locked",    score: null },
-    { lesson_id: 8,  order: 5, title: "مقارنة الأعداد الكبيرة (1)",          status: "locked",    score: null },
-    { lesson_id: 9,  order: 6, title: "مقارنة الأعداد الكبيرة (2)",          status: "locked",    score: null },
-    { lesson_id: 10, order: 7, title: "الأعداد تنازلياً وتصاعدياً",           status: "locked",    score: null },
-    { lesson_id: 11, order: 8, title: "قواعد التقريب",                        status: "locked",    score: null },
-  ],
-  science: [
-    { lesson_id: 12, order: 1, title: "لنبحث عن الكائنات الحية",              status: "completed", score: 87 },
-    { lesson_id: 13, order: 2, title: "كيف نلاحظ؟",                           status: "completed", score: 70 },
-    { lesson_id: 14, order: 3, title: "ألوان وأشكال الكائنات الحية",          status: "unlocked",  score: null },
-    { lesson_id: 15, order: 4, title: "أماكن مختلفة، كائنات مختلفة",         status: "locked",    score: null },
-    { lesson_id: 16, order: 5, title: "كائنات الصحراء الحية",                 status: "locked",    score: null },
-  ],
+const FIXTURE_LESSON = (id: string) => {
+  const item = getCurriculumLesson(Number(id));
+  if (!item) return null;
+  return {
+    lesson: {
+      id: item.id,
+      subject_id: item.subject.id,
+      order_index: item.order,
+      title: item.title,
+      objective: "",
+    },
+    sections: [],
+  };
 };
-
-const FIXTURE_LESSON = (id: string) => ({
-  id: Number(id),
-  title: "ما هي الحواس الخمس؟",
-  objective: "What are the Five Senses?",
-  is_published: true,
-  sections: [
-    { id: 1, order_index: 1, heading: "مقدمة", body_md: "## مقدمة\n\nالحواس الخمس هي..." },
-    { id: 2, order_index: 2, heading: "الحواس الخمس", body_md: "## الحواس الخمس\n\n1. البصر\n2. السمع..." },
-  ],
-});
 
 const FIXTURE_QUESTIONS = [
   { id: 1, qtype: "mcq",          body: "كم عدد الحواس؟",             options: ["3", "4", "5", "6"], skill_tag: "memorization"  },
@@ -96,12 +71,16 @@ export const handlers = [
   // Subjects
   http.get(`${BASE}/subjects`, () => HttpResponse.json(FIXTURE_SUBJECTS)),
   http.get(`${BASE}/subjects/:slug/path`, ({ params }) => {
-    const path = PATH_BY_SUBJECT[params.slug as string] ?? PATH_BY_SUBJECT.science;
-    return HttpResponse.json(path);
+    const slug = params.slug as string;
+    if (!getSubject(slug)) return HttpResponse.json({ detail: "Subject not found" }, { status: 404 });
+    return HttpResponse.json(initialPath(slug));
   }),
 
   // Lessons
-  http.get(`${BASE}/lessons/:id`,       ({ params }) => HttpResponse.json(FIXTURE_LESSON(params.id as string))),
+  http.get(`${BASE}/lessons/:id`, ({ params }) => {
+    const lesson = FIXTURE_LESSON(params.id as string);
+    return lesson ? HttpResponse.json(lesson) : HttpResponse.json({ detail: "Lesson not found" }, { status: 404 });
+  }),
   http.get(`${BASE}/lessons/:id/quiz`,  ()            => HttpResponse.json({ questions: FIXTURE_QUESTIONS })),
   http.post(`${BASE}/lessons/:id/quiz/submit`, ()     => HttpResponse.json(FIXTURE_QUIZ_SUBMIT)),
 

@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className={notoSansArabic.variable}>
       <body className="min-h-screen bg-gray-50 font-[family-name:var(--font-arabic)] antialiased">
-        {/* MSWProvider starts the Mock Service Worker in dev only. */}
+        {/* Explicit preview mode can run without a backend. */}
         <MSWProvider>{children}</MSWProvider>
       </body>
     </html>

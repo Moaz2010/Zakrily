@@ -9,6 +9,7 @@
  *   done      → session ended
  */
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { clampMinutes, remainingSeconds } from "./study-timer";
 
 export type TimerState = "idle" | "selecting" | "running" | "done";
 
@@ -27,36 +28,39 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<TimerState>("idle");
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [totalSeconds, setTotalSeconds] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const deadlineRef = useRef<number | null>(null);
 
-  const openModal = () => setState("selecting");
+  const openModal = () => { if (state !== "running") setState("selecting"); };
 
   const startTimer = (minutes: number) => {
-    const secs = minutes * 60;
+    const secs = clampMinutes(minutes) * 60;
+    deadlineRef.current = Date.now() + secs * 1000;
     setTotalSeconds(secs);
     setSecondsLeft(secs);
     setState("running");
   };
 
   const stopTimer = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    deadlineRef.current = null;
     setState("idle");
     setSecondsLeft(0);
+    setTotalSeconds(0);
   };
 
   useEffect(() => {
     if (state !== "running") return;
-    intervalRef.current = setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) {
-          clearInterval(intervalRef.current!);
-          setState("done");
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(intervalRef.current!);
+    const tick = () => {
+      if (deadlineRef.current === null) return;
+      const remaining = remainingSeconds(deadlineRef.current);
+      setSecondsLeft(remaining);
+      if (remaining === 0) setState("done");
+    };
+    const interval = setInterval(tick, 250);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", tick);
+    };
   }, [state]);
 
   return (

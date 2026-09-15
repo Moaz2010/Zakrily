@@ -3,9 +3,9 @@
 /* ── Zakrely Design Tokens ─────────────────────────────────────────────────── */
 :root {
   /* App shell */
-  --color-bg:          #0E0E0E;
-  --color-bg-card:     #1C1C1C;
-  --color-bg-card-2:   #252525;
+  --color-bg:          #F7F7F7;
+  --color-bg-card:     #FFFFFF;
+  --color-bg-card-2:   #EEEFEA;
 
   /* Subject brand colours */
   --color-science:     #1E5C4A;   /* dark teal  */
@@ -23,8 +23,8 @@
   --color-brown-node:  #5C3D30;   /* unlocked node */
 
   /* Text */
-  --color-text:        #F5F5F5;
-  --color-text-muted:  #9A9A9A;
+  --color-text:        #292C32;
+  --color-text-muted:  #737C77;
 
   /* Nav */
   --color-nav-bg:      #141414;

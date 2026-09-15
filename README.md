@@ -58,12 +58,27 @@ npm run dev
 ```
 
 With `NEXT_PUBLIC_USE_MOCKS=true`, the frontend runs entirely against MSW mocks
-(`src/lib/api/mocks/handlers.ts`) with zero backend dependency — this is the default
-for local frontend-only work. Set it to `false` (and `NEXT_PUBLIC_API_BASE_URL` to the
-real backend URL) to hit the live API.
+(`frontend/mocks/handlers.ts`) with zero backend dependency, including production
+preview builds. Local development defaults to mocks; production requires this
+flag explicitly. `npm install` generates the worker in `public/`. Set the flag to
+`false` (and `NEXT_PUBLIC_API_BASE_URL` to the real backend URL) to hit the live API.
 
 Deploy the frontend to Vercel by importing the repo and setting the root directory to
 `frontend/`.
+
+### Unit 1 curriculum
+
+`frontend/lib/curriculum.json` is the shared catalog used by the frontend preview,
+backend catalog routes, and `python -m scripts.seed`. It contains 3 English lessons,
+8 Math lessons (including the paired titles and two concepts), and 5 Science lessons.
+Backend deployments must include this file at its repository-relative location.
+
+The seed can be rerun: it matches lessons by subject and order, updates names, and
+preserves existing objectives, sections, and publication status. New lessons start
+unpublished because only names have been supplied. The lesson page displays a
+content-coming-soon message until sections are available. The current catalog API
+uses initial path status (first lesson unlocked); saved learner progress remains a
+separate backend task. Existing quiz and practice endpoints still use prototype fixtures.
 
 ### 4. Content ingestion (offline, once real Unit 1 content is available)
 

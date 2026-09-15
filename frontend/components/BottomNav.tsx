@@ -38,28 +38,30 @@ const ProfileIcon = () => (
 
 // RTL / LTR: play icon
 const PlayIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-6 w-6 text-[#1A1A1A] fill-current translate-x-0.5">
-    <path d="M8 5v14l11-7z" />
+  <svg viewBox="0 0 24 24" className="h-8 w-8 text-[#17191d] translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+    <path d="M7 4.5a1 1 0 0 1 1.5-.85l12 7.5a1 1 0 0 1 0 1.7l-12 7.5A1 1 0 0 1 7 19.5z" />
   </svg>
 );
 
-export function BottomNav() {
+export function BottomNav({ timerSelection }: { timerSelection?: { minutes: number; start: () => void } }) {
   const pathname = usePathname();
-  const { state, secondsLeft, openModal } = useTimer();
+  const { state, secondsLeft, openModal, stopTimer } = useTimer();
 
   const isRunning = state === "running";
   const isIdle    = state === "idle" || state === "done";
 
   return (
-    <div className="fixed bottom-4 inset-x-0 z-40 flex justify-center pointer-events-none">
+    <div className="fixed bottom-3 inset-x-0 z-40 flex justify-center pointer-events-none pb-[env(safe-area-inset-bottom)]">
       <nav
         dir="ltr"
         className="pointer-events-auto w-[calc(100%-2rem)] max-w-[390px] flex items-center justify-between
-                   rounded-[28px] bg-[#1F232B] px-3 py-2 shadow-2xl border border-white/5"
+                   rounded-[20px] bg-[#292C32] px-3 py-3 shadow-lg min-h-[72px]"
+        aria-label="التنقل الرئيسي"
+        onClick={(event) => { if (timerSelection && (event.target as Element).closest("a")) stopTimer(); }}
       >
         {/* 1. Home */}
         <NavTab href="/home" label="home" active={pathname === "/home"}>
-          <div className={pathname === "/home" ? "flex items-center justify-center h-8 w-8 rounded-full bg-white/10 text-white" : "text-[#7A808C]"}>
+          <div className={pathname === "/home" ? `flex items-center justify-center h-12 w-12 -mt-7 mb-1 rounded-full bg-[#292C32] text-[#FAF5E4] ring-[5px] ${timerSelection ? "ring-[#466F67]" : "ring-[#F7F7F7]"}` : "text-[#B9BBBD]"}>
             <HomeIcon />
           </div>
         </NavTab>
@@ -73,14 +75,15 @@ export function BottomNav() {
 
         {/* 3. CENTER: Play button / Timer countdown */}
         <button
-          onClick={isIdle ? openModal : undefined}
+          onClick={timerSelection ? timerSelection.start : isRunning ? stopTimer : isIdle ? openModal : undefined}
           className={[
             "relative flex items-center justify-center rounded-full transition-transform active:scale-95 shadow-lg",
             isRunning
               ? "h-11 min-w-[72px] px-3 bg-[#2D8A6A] border-2 border-white/20 text-white text-xs font-bold tabular-nums"
-              : "h-12 w-12 bg-white",
+              : "h-14 w-14 bg-[#F8F8F8]",
           ].join(" ")}
-          aria-label={isRunning ? "وقت الدراسة المتبقي" : "ابدأ جلسة دراسة"}
+          aria-label={timerSelection ? `ابدأ المذاكرة لمدة ${timerSelection.minutes} دقيقة` : isRunning ? `الوقت المتبقي ${fmtTime(secondsLeft)} — إنهاء الجلسة` : "اختر وقت المذاكرة"}
+          title={isRunning ? "إنهاء الجلسة" : undefined}
         >
           {isRunning ? (
             <span>{fmtTime(secondsLeft)}</span>
@@ -103,6 +106,7 @@ export function BottomNav() {
           </div>
         </NavTab>
       </nav>
+      <span className="sr-only" role="status">{state === "done" ? "برافو! خلصت جلسة المذاكرة." : ""}</span>
     </div>
   );
 }

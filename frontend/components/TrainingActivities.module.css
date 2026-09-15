@@ -1,0 +1,37 @@
+.activities { padding: 16px 22px 28px; color: #f8f8f8; }
+.stages { list-style: none; padding: 0 16px; margin: 0 0 24px; display: grid; grid-template-columns: 1fr 3.5fr 1.2fr .5fr; gap: 6px; }
+.stages li { min-width: 0; text-align: center; }
+.stages span { color: #787c81; font-size: 8px; display: block; margin-bottom: 8px; }
+.stages i { display: block; height: 6px; border-radius: 10px; background: #899fc0; }
+.stages li:last-child i { background: #e0e0df; }
+.stages .currentStage i { background: linear-gradient(to right, #ad6263 65%, #ecc5c6 65%); }
+.card { position: relative; isolation: isolate; overflow: hidden; border-radius: 42px; display: block; padding: 20px; text-align: start; text-decoration: none; color: #f8f8f8; width: 100%; }
+.card h3 { position: relative; font-size: 32px; font-weight: 850; line-height: 1.1; margin: 0; z-index: 1; }
+.quiz { background: #292c32; min-height: 172px; margin-bottom: 12px; }
+.quiz h3 { text-align: start; }
+.quizFooter { display: flex; align-items: flex-end; justify-content: space-between; direction: ltr; gap: 12px; margin-top: 20px; }
+.quizFooter p { font-size: 21px; line-height: 1.2; font-weight: 750; color: #d0d0d1; text-align: start; direction: rtl; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.smart { background: #4a638c; }
+.flash { background: #af6464; cursor: pointer; border: 0; font-family: inherit; }
+.pair .card { min-height: 175px; padding: 16px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.arrow { display: grid; place-items: center; width: 52px; height: 52px; background: #f7f7f7; color: #25282b; border-radius: 50%; position: relative; flex-shrink: 0; border: 2px solid #292c32; outline: 2px solid #f7f7f7; outline-offset: 3px; margin: 3px; }
+.arrow::after { content: ""; position: absolute; inset: -8px; border: 2px solid #ffffff80; border-left-color: transparent; border-bottom-color: transparent; border-radius: 50%; transform: rotate(-20deg); }
+.arrow svg { width: 23px; height: 23px; }
+.smart .arrow { border-color: #4a638c; }.flash .arrow { border-color: #af6464; }
+.pattern { position: absolute; inset: -12% -9% auto auto; width: 92%; height: 125%; color: #a9aaaa; opacity: .27; z-index: -1; pointer-events: none; }
+.smart .pattern { inset: 15% auto auto -35%; width: 130%; color: #b1c7ef; opacity: .5; transform: rotate(18deg); }
+.flash .pattern { inset: -25% auto auto -60%; width: 140%; color: #efb0aa; opacity: .48; transform: rotate(80deg); }
+.card:hover .arrow { transform: translateX(2px); }
+.card:focus-visible { outline: 3px solid #d79e60; outline-offset: 4px; }
+.dialog { position: fixed; inset: 0; margin: auto; width: calc(100% - 40px); max-width: 370px; max-height: 80dvh; overflow-y: auto; border: 0; border-radius: 28px; padding: 24px; background: #f7f7f7; color: #292c32; }
+.dialog::backdrop { background: #1119; }
+.dialogHeading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.dialogHeading h2 { font-size: 22px; font-weight: 800; }
+.dialogHeading button { width: 40px; height: 40px; border-radius: 50%; background: #e5e5e5; font-size: 25px; cursor: pointer; }
+.dialog p { font-size: 14px; line-height: 1.8; }
+.dialog h3 { font-size: 20px; font-weight: 700; margin-block: 15px; }
+.answer { white-space: pre-wrap; }
+.reveal { width: 100%; border-radius: 14px; padding: 12px; background: #af6464; color: white; cursor: pointer; }
+.pagination { display: flex; justify-content: space-between; margin-top: 20px; }.pagination button { padding: 10px; cursor: pointer; }.pagination button:disabled { opacity: .35; cursor: default; }
+@media (max-width: 360px) { .activities { padding-inline: 18px; } .card h3 { font-size: 29px; } .quizFooter p { font-size: 19px; } .quiz { min-height: 145px; } .pair .card { min-height: 148px; padding: 13px; } .arrow { width: 44px; height: 44px; } }

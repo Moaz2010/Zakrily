@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.security import get_current_user
 from app.models.user import User
+from app.curriculum import LESSONS
 from app.schemas.common import QuestionTypeEnum, SkillTagEnum
-from app.schemas.lesson import LessonDetail, LessonOut, LessonSectionOut
+from app.schemas.lesson import LessonDetail, LessonOut
 from app.schemas.quiz import QuestionPublic, QuizOut
 
 router = APIRouter(tags=["lessons"])
@@ -11,18 +12,17 @@ router = APIRouter(tags=["lessons"])
 
 @router.get("/lessons/{lesson_id}", response_model=LessonDetail)
 def get_lesson(lesson_id: int, current_user: User = Depends(get_current_user)):
+    item = LESSONS.get(lesson_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Lesson not found")
     lesson = LessonOut(
         id=lesson_id,
-        subject_id=1,
-        order_index=1,
-        title=f"Lesson {lesson_id}",
-        objective="Sample objective for prototype fixture.",
+        subject_id=item["subject_id"],
+        order_index=item["order"],
+        title=item["title"],
+        objective="",
     )
-    sections = [
-        LessonSectionOut(id=1, order_index=1, heading="Introduction", body_md="Sample lesson content."),
-        LessonSectionOut(id=2, order_index=2, heading="Key Points", body_md="- Point one\n- Point two"),
-    ]
-    return LessonDetail(lesson=lesson, sections=sections)
+    return LessonDetail(lesson=lesson, sections=[])
 
 
 @router.get("/lessons/{lesson_id}/quiz", response_model=QuizOut)

@@ -4,6 +4,7 @@
  * Taps a subject → goes to learning path /lessons/[subject].
  */
 import Link from "next/link";
+import { getSubject } from "@/lib/curriculum";
 
 const SUBJECTS = [
   { slug: "english", ar: "اللغة الإنجليزية", en: "English", bg: "#2A4A6B", emoji: "🇬🇧" },
@@ -26,6 +27,8 @@ export default function LessonsIndexPage() {
               <div className="text-end">
                 <p className="text-white font-black text-xl">{s.ar}</p>
                 <p className="text-white/60 text-sm">{s.en}</p>
+                <p className="mt-2 text-white/80 text-xs" dir="ltr">{getSubject(s.slug)?.unit}</p>
+                <p className="mt-1 text-white/60 text-xs">{getSubject(s.slug)?.lessons.length} دروس</p>
               </div>
             </div>
           </Link>

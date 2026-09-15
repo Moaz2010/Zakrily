@@ -1,201 +1,140 @@
 "use client";
-/**
- * Learning path screen — matches design image 3.
- *
- * Shows a curved SVG path with circular lesson nodes:
- *   - Teal flag  → completed (first/latest)
- *   - Dark brown atom → unlocked
- *   - Red ?      → current
- *   - Grey lock  → locked
- *
- * Header: subject name (teal bg) + progress bar + unit/lesson info.
- * Tabs: شرح (content) | تدريبات (practice)
- *
- * RTL: all layout uses logical properties.
- */
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { subjectsApi, type PathNodeOut } from "@/lib/api";
+import { getSubject } from "@/lib/curriculum";
+import { TrainingActivities } from "@/components/TrainingActivities";
+import styles from "./path.module.css";
 
-const SUBJECT_LABELS: Record<string, { ar: string; bg: string }> = {
-  english: { ar: "إنجليزي",   bg: "#2A4A6B" },
-  math:    { ar: "رياضيات",   bg: "#6B2A28" },
-  science: { ar: "علوم",      bg: "#1E5C4A" },
-};
+const COLORS: Record<string, string> = { science: "#527f76", math: "#996963", english: "#597b96" };
+const LABELS: Record<string, string> = { science: "علوم", math: "رياضيات", english: "إنجليزي" };
+const X = [252, 112, 82, 238, 278, 128, 82, 252];
 
-type NodeStatus = "completed" | "unlocked" | "current" | "locked";
-
-// Node visual config
-const NODE_STYLE: Record<NodeStatus, { bg: string; border: string; size: number }> = {
-  completed: { bg: "#2D8A6A", border: "#3DAA82", size: 68 },
-  unlocked:  { bg: "#5C3D30", border: "#7A5040", size: 52 },
-  current:   { bg: "#B84040", border: "#D05050", size: 60 },
-  locked:    { bg: "#3A3A3A", border: "#5A5A5A", size: 44 },
-};
-
-// Assign status based on path position
-function getStatus(node: PathNodeOut): NodeStatus {
-  if (node.status === "completed") return "completed";
-  if (node.status === "unlocked")  return "unlocked";
-  return "locked";
+function LessonIcon({ kind }: { kind: "flag" | "current" | "completed" | "locked" }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {kind === "flag" && <><path d="M9 4h12l-4 5 4 5H9z" fill="currentColor" stroke="none" /><path d="M5 21V3" strokeWidth="3" /></>}
+      {kind === "current" && <><path d="M9 18H5V8a7 7 0 0 1 14 0v3l2 4h-3v5h-7" /><path d="M10 7a2 2 0 1 1 3 1.7c-1 .5-1 1-1 1.8M12 14h.01" /></>}
+      {kind === "completed" && <path d="m5 12 4 4L19 6" strokeWidth="2.5" />}
+      {kind === "locked" && <><rect x="5" y="10" width="14" height="11" rx="2" fill="currentColor" stroke="none" /><path d="M8 10V7a4 4 0 0 1 8 0v3" strokeWidth="2.5" /></>}
+    </svg>
+  );
 }
 
-// Node icons
-function NodeIcon({ status }: { status: NodeStatus }) {
-  if (status === "completed") return (
-    <svg viewBox="0 0 24 24" className="h-7 w-7" fill="white">
-      <path d="M5 3v16l7-4 7 4V3z" />
-    </svg>
-  );
-  if (status === "unlocked") return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="white" strokeWidth={1.5}>
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2m0 16v2M2 12h2m16 0h2m-3.5-6.5-1.4 1.4M6.9 17.1l-1.4 1.4M17.1 17.1l1.4-1.4M6.9 6.9 5.5 5.5" />
-    </svg>
-  );
-  if (status === "current") return (
-    <span className="text-white text-2xl font-black">?</span>
-  );
-  // locked
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="white" opacity={0.6}>
-      <path d="M18 11H6V9a6 6 0 0 1 12 0v2zm1 1H5a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1z" />
-    </svg>
-  );
+function Leaves({ className }: { className: string }) {
+  return <svg className={className} viewBox="0 0 180 240" fill="currentColor" aria-hidden="true">
+    <ellipse cx="126" cy="60" rx="17" ry="65" transform="rotate(-22 126 60)" />
+    <ellipse cx="83" cy="111" rx="18" ry="72" transform="rotate(-65 83 111)" />
+    <ellipse cx="82" cy="156" rx="17" ry="73" transform="rotate(66 82 156)" />
+    <ellipse cx="132" cy="184" rx="17" ry="63" transform="rotate(23 132 184)" />
+  </svg>;
 }
 
 export default function LearningPathPage() {
-  const params  = useParams();
-  const router  = useRouter();
-  const slug    = params.subject as string;
-  const config  = SUBJECT_LABELS[slug] ?? { ar: slug, bg: "#1E5C4A" };
-
+  const { subject: slug } = useParams<{ subject: string }>();
+  const subject = getSubject(slug);
   const [nodes, setNodes] = useState<PathNodeOut[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const [mode, setMode] = useState<"lesson" | "practice">("lesson");
+  const viewport = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    subjectsApi.path(slug).then(setNodes).catch(console.error);
-  }, [slug]);
+    let active = true;
+    setLoading(true);
+    setError(false);
+    setNodes([]);
+    subjectsApi.path(slug)
+      .then((data) => { if (active) setNodes([...data].sort((a, b) => a.order - b.order)); })
+      .catch(() => { if (active) setError(true); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [slug, retry]);
 
-  // Current lesson index
-  const currentIdx = nodes.findIndex((n) => n.status === "unlocked");
-  const currentNode = nodes[currentIdx] ?? nodes[0];
+  const current = nodes.find((node) => node.status === "unlocked");
+  const completed = nodes.filter((node) => node.status === "completed").length;
+  const progress = nodes.length ? Math.round(completed / nodes.length * 100) : 0;
+  const height = Math.max(540, nodes.length * 180 + 80);
+  const points = nodes.map((_, i) => ({ x: X[i % X.length], y: height - 100 - i * 180 }));
 
-  // Curve waypoints — distribute nodes along a winding S-curve
-  // Positions are percentages of the container width/height
-  const waypoints = [
-    { x: 72, y: 85 },  // index 0 — bottom (completed, flag)
-    { x: 45, y: 70 },  // index 1
-    { x: 25, y: 55 },  // index 2 — current (red ?)
-    { x: 48, y: 40 },  // index 3
-    { x: 68, y: 25 },  // index 4 — locked
-    { x: 50, y: 10 },  // index 5 — locked
-  ];
+  useEffect(() => {
+    const container = viewport.current;
+    if (!container || !nodes.length) return;
+    const index = Math.max(0, nodes.findIndex((node) => node.status === "unlocked"));
+    const y = height - 100 - index * 180;
+    container.scrollTop = y - container.clientHeight + 130;
+  }, [nodes, height, loading, mode]);
+
+  if (!subject) return <div className="p-6 text-center"><h1>المادة غير موجودة</h1><Link href="/lessons" className="underline">العودة للمواد</Link></div>;
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
-      {/* ── Header (teal) ──────────────────────────────────────────────────── */}
-      <div style={{ backgroundColor: config.bg }} className="relative px-5 pt-12 pb-4">
-        {/* Back button — RTL: arrow points right (forward in RTL) */}
-        <button onClick={() => router.back()}
-          className="absolute top-12 start-4 text-white/80">
-          {/* RTL: mirror icon */}
-          <svg viewBox="0 0 24 24" className="h-6 w-6 [transform:scaleX(-1)]" fill="none"
-               stroke="currentColor" strokeWidth={2}>
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-        </button>
-
-        <h1 className="text-white font-black text-3xl text-end">{config.ar}</h1>
-
-        {/* Progress bar + metadata */}
-        <div className="flex items-center gap-3 mt-3">
-          <div className="flex-1 h-2 rounded-full bg-white/20">
-            <div className="h-2 rounded-full bg-[#D4813A]" style={{ width: "42%" }} />
-          </div>
-          <span className="text-white/80 text-sm font-semibold">42%</span>
-          <div className="rounded-lg bg-white/20 px-2 py-1 flex items-center gap-1">
-            <span className="text-white text-xs">📚 4 وحدات · 25 حصة</span>
+    <div className={styles.page} style={{ "--subject-color": COLORS[slug] } as CSSProperties}>
+      <header className={styles.header}>
+        <Leaves className={styles.headerLeaves} />
+        <div className={styles.headingRow}>
+          <h1>{LABELS[slug]}</h1>
+          <Link href="/lessons" aria-label="العودة للمواد" className={styles.back}>
+            {/* The reference places a left-pointing back arrow on the left. */}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m15 4-8 8 8 8" /></svg>
+          </Link>
+        </div>
+        <div className={styles.summary}>
+          <div className={styles.count}><span aria-hidden="true">📖</span><div><strong>{subject.unit_ar}</strong><small>{subject.lessons.length} دروس</small></div></div>
+          <div className={styles.progressWrap}>
+            <span>{loading || error ? "—" : `${progress}٪`}</span>
+            <div className={styles.progress} role="progressbar" aria-label="تقدم المادة" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><div style={{ width: `${progress}%` }} /></div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* ── Unit/lesson info + tabs ─────────────────────────────────────── */}
-      <div className="bg-white px-5 py-4 border-b border-gray-100">
-        <div className="text-end">
-          <p className="text-[#9A9A9A] text-sm">الدرس {currentNode?.order ?? 1}</p>
-          <h2 className="text-black font-black text-2xl">
-            الوحدة {Math.ceil((currentNode?.order ?? 1) / 2)}
-          </h2>
+      <section className={styles.unit} aria-label="معلومات الوحدة">
+        <div className={styles.unitRow}>
+          <div><h2>{subject.unit_ar}</h2><p>{current ? `الدرس ${current.order}` : loading ? "جاري التحميل…" : completed === nodes.length && nodes.length ? "أكملت كل الدروس" : "مسار التعلم"}</p></div>
+          <div className={styles.tabs} role="group" aria-label="نوع النشاط">
+            <button onClick={() => setMode("lesson")} aria-pressed={mode === "lesson"}><span aria-hidden="true">📖</span> شرح</button>
+            <button onClick={() => setMode("practice")} aria-pressed={mode === "practice"}><span aria-hidden="true">✎</span> تدريبات</button>
+          </div>
         </div>
-        {/* Tab switcher */}
-        <div className="flex gap-2 mt-3 justify-end">
-          <button className="flex items-center gap-1 rounded-full bg-[#1E5C4A]/10
-                             px-3 py-1.5 text-[#1E5C4A] text-sm font-semibold">
-            <span>📖</span> شرح
-          </button>
-          <button className="flex items-center gap-1 rounded-full bg-gray-100
-                             px-3 py-1.5 text-gray-500 text-sm">
-            <span>✏️</span> تدريبات
-          </button>
+        {subject.theme && <p className={styles.theme} dir="ltr" lang="en">{subject.theme}</p>}
+        <p className={styles.unitTitle} dir="ltr" lang="en">{subject.unit}</p>
+      </section>
+
+      {loading ? <div className={styles.message} role="status">جاري تحميل الدروس…</div> : error ? (
+        <div className={styles.message} role="alert"><p>تعذر تحميل الدروس. حاول مرة أخرى.</p><button onClick={() => setRetry((n) => n + 1)}>إعادة المحاولة</button></div>
+      ) : !nodes.length ? <div className={styles.message}>لا توجد دروس متاحة بعد.</div> : mode === "practice" ? <TrainingActivities subject={slug} lessonId={(current ?? nodes[nodes.length - 1]).lesson_id} /> : <>
+        <div ref={viewport} className={styles.viewport} tabIndex={0} role="region" aria-label="مسار الدروس — مرر لأعلى لعرض الدروس التالية">
+          <div className={styles.map} style={{ height }}>
+            <Leaves className={styles.leavesRight} /><Leaves className={styles.leavesLeft} />
+            <svg className={styles.trail} viewBox={`0 0 360 ${height}`} preserveAspectRatio="none" aria-hidden="true">
+              <path d={`M ${points[0].x - 20} ${height + 20} Q ${points[0].x + 35} ${height - 25} ${points[0].x} ${points[0].y}`} />
+              {points.slice(1).map((point, i) => {
+                const previous = points[i];
+                const middle = (previous.y + point.y) / 2;
+                return <path key={i} d={`M ${previous.x} ${previous.y} C ${previous.x} ${middle}, ${point.x} ${middle}, ${point.x} ${point.y}`} />;
+              })}
+            </svg>
+            <ol className={styles.lessonList}>
+              {nodes.map((node, i) => {
+                const point = points[i];
+                const isCurrent = node.lesson_id === current?.lesson_id;
+                const locked = node.status === "locked";
+                const kind = locked ? "locked" : i === 0 ? "flag" : isCurrent ? "current" : "completed";
+                const info = subject.lessons.find((lesson) => lesson.order === node.order);
+                const status = locked ? "أكمل الدرس السابق لفتحه" : isCurrent ? "ابدأ هنا" : "مكتمل";
+                const href = `/lessons/${slug}/${node.lesson_id}`;
+                const content = <><span className={`${styles.node} ${styles[kind]}`}><LessonIcon kind={kind} /></span><span className={styles.label}><span className={styles.lessonNumber}>الدرس {node.order} {node.status === "completed" && "✓"}</span><strong dir="ltr" lang="en">{node.title}</strong>{info?.concept && <small dir="ltr" lang="en">{info.concept}</small>}<span className={styles.status}>{status}</span></span></>;
+                return <li key={node.lesson_id} className={`${styles.lesson} ${point.x > 180 ? styles.onRight : styles.onLeft}`} style={{ top: point.y, "--node-x": `${point.x / 360 * 100}%` } as CSSProperties}>
+                  {locked ? <div className={styles.lessonContent} aria-disabled="true">{content}</div> : <Link href={href} className={styles.lessonContent} aria-current={isCurrent ? "step" : undefined} aria-label={`الدرس ${node.order}: ${node.title} — ${mode === "lesson" ? "شرح" : "تدريبات"}`}>{content}</Link>}
+                </li>;
+              })}
+            </ol>
+          </div>
         </div>
-      </div>
-
-      {/* ── Path map ────────────────────────────────────────────────────── */}
-      <div className="relative flex-1 overflow-hidden bg-white" style={{ minHeight: 380 }}>
-        {/* Decorative leaves */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute top-8 end-2 text-6xl opacity-20 select-none">🌿</div>
-          <div className="absolute top-32 start-0 text-5xl opacity-15 select-none">🍃</div>
-          <div className="absolute bottom-8 end-4 text-5xl opacity-15 select-none">🌿</div>
-        </div>
-
-        {/* SVG curve path */}
-        <svg
-          className="absolute inset-0 w-full h-full"
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-        >
-          <path
-            d="M72,92 C60,80 30,70 25,55 C20,40 50,38 48,25 C46,12 50,5 50,5"
-            fill="none"
-            stroke="#1C1C1C"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-        </svg>
-
-        {/* Nodes */}
-        {nodes.slice(0, waypoints.length).map((node, i) => {
-          const wp     = waypoints[i];
-          const status: NodeStatus =
-            i === 0 ? "completed"
-            : i === currentIdx ? "current"
-            : node.status === "unlocked" ? "unlocked"
-            : "locked";
-          const style  = NODE_STYLE[status];
-
-          return (
-            <Link
-              key={node.lesson_id}
-              href={`/lessons/${slug}/${node.lesson_id}`}
-              className="absolute flex items-center justify-center rounded-full
-                         shadow-lg transition-transform active:scale-95"
-              style={{
-                left:      `${wp.x}%`,
-                top:       `${wp.y}%`,
-                transform: "translate(-50%, -50%)",
-                width:     style.size,
-                height:    style.size,
-                backgroundColor: style.bg,
-                border:    `3px solid ${style.border}`,
-              }}
-            >
-              <NodeIcon status={status} />
-            </Link>
-          );
-        })}
-      </div>
+        <p className={styles.hint}>↑ مرر لأعلى لاكتشاف باقي الدروس · {completed} من {nodes.length} مكتمل</p>
+      </>}
     </div>
   );
 }

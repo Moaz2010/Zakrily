@@ -1,115 +1,53 @@
 "use client";
-/**
- * Profile screen (حسابي) — matches design image 5.
- *
- * Sections:
- *   1. Dark header: settings cog, mascot, name, grade
- *   2. Stats row: accuracy card (dark) + streak card (dark)
- *   3. "الأداء حسب المادة" — per-subject rows with circular % and label
- */
-import { useEffect, useState } from "react";
-import { skillsApi, type SkillScoreOut } from "@/lib/api";
 
-// Per-subject performance (from mock — real data from BE-07+)
+import { useEffect, useRef, useState } from "react";
+import { skillsApi, type SkillScoreOut } from "@/lib/api";
+import styles from "./profile.module.css";
+
+// Existing prototype subject statistics; learner analytics are a separate API task.
 const SUBJECT_PERFORMANCE = [
-  { label: "الرياضيات", pct: 87, grade: "ممتاز",        gradeColor: "#2D8A6A" },
-  { label: "علوم",      pct: 55, grade: "محتاج مراجعة", gradeColor: "#D4813A" },
-  { label: "انجليزي",   pct: 23, grade: "سيء",           gradeColor: "#B84040" },
+  { label: "الرياضيات", pct: 87, grade: "ممتاز", color: "#527f76", track: "#c8ded8" },
+  { label: "علوم", pct: 55, grade: "محتاج مراجعة", color: "#c5a23b", track: "#f1e4b6" },
+  { label: "انجليزي", pct: 23, grade: "سيء", color: "#d55959", track: "#f0c7c7" },
 ];
 
 export default function ProfilePage() {
-  const [skills, setSkills] = useState<SkillScoreOut[]>([]);
+  const [skills, setSkills] = useState<SkillScoreOut[] | null>(null);
+  const settings = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    skillsApi.mySkills().then(setSkills).catch(console.error);
+    let active = true;
+    skillsApi.mySkills().then((data) => { if (active) setSkills(data); }).catch(() => { if (active) setSkills([]); });
+    return () => { active = false; };
   }, []);
 
-  const avgAccuracy = skills.length
-    ? Math.round(skills.reduce((s, sk) => s + sk.accuracy * 100, 0) / skills.length)
-    : 78;
+  const accuracy = skills?.length ? Math.round(skills.reduce((sum, skill) => sum + skill.accuracy * 100, 0) / skills.length) : null;
 
-  return (
-    <div className="flex flex-col min-h-screen bg-[#0E0E0E]">
-      {/* ── Header ────────────────────────────────────────────────────────── */}
-      <div className="relative bg-[#1C1C1C] pt-12 pb-6 px-5">
-        {/* Settings cog */}
-        <button className="absolute top-12 start-4 text-[#6A6A6A]">
-          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none"
-               stroke="currentColor" strokeWidth={2}>
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-        </button>
-
-        {/* Mascot + name */}
-        <div className="flex flex-col items-end gap-2">
-          <div className="h-28 w-28">
-            <img src="/mascot.png" alt=""
-                 className="h-full w-full object-contain"
-                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-          </div>
-          <div className="text-end">
-            <h1 className="text-white font-black text-3xl">سلمى مدحت</h1>
-            <p className="text-[#9A9A9A] text-sm">رابعة ابتدائي</p>
-          </div>
-        </div>
+  return <div className={styles.page}>
+    <header className={styles.hero}>
+      <div className={styles.petals} aria-hidden="true"><img src="/petals-cross.png" alt="" /><img src="/petals-diagonal.png" alt="" /></div>
+      <button type="button" className={styles.settings} aria-label="إعدادات الحساب" onClick={() => settings.current?.showModal()}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true"><path d="m10 2-.7 3-2 .9L4.5 4.5l-2 3 2.1 2.1-.2 2.4L2 14l1.5 3.2 3-.4 1.8 1.5.5 3.2h3.7l1-3 2.2-.7 2.5 1.5 2.3-2.8-1.8-2.5.3-2.2 2.5-1.6-1.2-3.4-3.2.2-1.8-1.7L14 2z" /><circle cx="12" cy="12" r="3.2" /></svg>
+      </button>
+      <img className={styles.person} src="/profile-person.svg" width={102} height={269} alt="شخصية الملف الشخصي" />
+      <div className={styles.identity}><h1>سلمى مدحت</h1><p>رابعة ابتدائي</p></div>
+    </header>
+    <section className={styles.content} aria-label="إحصائيات الدراسة">
+      <div className={styles.stats} dir="ltr">
+        <div className={styles.accuracy} dir="rtl"><h2>متوسط الدقة</h2><strong>{accuracy === null ? "—" : `${accuracy}%`}</strong></div>
+        <div className={styles.streak} aria-label="سلسلة الدراسة: 20 يومًا"><span className={styles.flame} aria-hidden="true">🔥</span><strong>20</strong><div className={styles.mom}><img src="/mom-timer.png" alt="ماما بتشجعك تستمر" width={112} height={119} /></div><span className={styles.star} aria-hidden="true">★</span></div>
       </div>
-
-      {/* ── Stats row ───────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 px-4 pt-4">
-        {/* Accuracy */}
-        <div className="rounded-2xl bg-[#1C1C1C] p-4 text-end">
-          <p className="text-[#9A9A9A] text-xs mb-1">متوسط الدقة</p>
-          <p className="text-white font-black text-3xl">{avgAccuracy}%</p>
-        </div>
-        {/* Streak */}
-        <div className="rounded-2xl bg-[#1C1C1C] p-4 flex items-center justify-end gap-3">
-          <div className="text-end">
-            <p className="text-white font-black text-3xl">20</p>
+      <h2 className={styles.performanceTitle}>الأداء حسب المادة</h2>
+      <div className={styles.performance}>
+        {SUBJECT_PERFORMANCE.map((subject) => <div key={subject.label} className={styles.subject}>
+          <div className={styles.ring} role="img" aria-label={`دقة ${subject.label}: ${subject.pct}٪`}>
+            <svg width="54" height="54" viewBox="0 0 54 54" aria-hidden="true"><circle cx="27" cy="27" r="22" fill="none" stroke={subject.track} strokeWidth="4.5" /><circle cx="27" cy="27" r="22" fill="none" stroke={subject.color} strokeWidth="4.5" strokeDasharray={`${subject.pct / 100 * 2 * Math.PI * 22} ${2 * Math.PI * 22}`} strokeLinecap="round" transform="rotate(-90 27 27)" /></svg>
+            <span style={{ color: subject.color }}>{subject.pct}%</span>
           </div>
-          <span className="text-4xl">🔥</span>
-        </div>
+          <h3>{subject.label}</h3><span className={styles.grade} style={{ color: subject.color }}>{subject.grade}</span>
+        </div>)}
       </div>
-
-      {/* ── Performance by subject ───────────────────────────────────────── */}
-      <div className="px-4 pt-5 pb-4">
-        <h2 className="text-white font-bold text-lg text-end mb-3">الأداء حسب المادة</h2>
-        <div className="flex flex-col gap-3">
-          {SUBJECT_PERFORMANCE.map((sub) => (
-            <div key={sub.label}
-                 className="rounded-2xl bg-[#1C1C1C] px-4 py-3 flex items-center justify-between">
-              {/* Grade label */}
-              <span className="text-sm font-semibold" style={{ color: sub.gradeColor }}>
-                {sub.grade}
-              </span>
-
-              {/* Progress bar + subject name */}
-              <div className="flex flex-col items-end gap-1 flex-1 mx-4">
-                <p className="text-white font-bold text-base">{sub.label}</p>
-                <div className="w-full h-2 rounded-full bg-[#2A2A2A]">
-                  <div
-                    className="h-2 rounded-full"
-                    style={{ width: `${sub.pct}%`, backgroundColor: sub.gradeColor }}
-                  />
-                </div>
-              </div>
-
-              {/* Circular % */}
-              <div className="relative flex items-center justify-center">
-                <svg width={52} height={52} className="-rotate-90">
-                  <circle cx={26} cy={26} r={20} fill="none"
-                          stroke="rgba(255,255,255,0.1)" strokeWidth={5} />
-                  <circle cx={26} cy={26} r={20} fill="none"
-                          stroke={sub.gradeColor} strokeWidth={5}
-                          strokeDasharray={`${(sub.pct / 100) * (2 * Math.PI * 20)} ${2 * Math.PI * 20}`}
-                          strokeLinecap="round" />
-                </svg>
-                <span className="absolute text-white font-bold text-xs">{sub.pct}%</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+    </section>
+    <dialog ref={settings} className={styles.dialog} aria-labelledby="settings-title"><div className={styles.dialogHeader}><h2 id="settings-title">إعدادات الحساب</h2><button onClick={() => settings.current?.close()} aria-label="إغلاق الإعدادات">×</button></div><dl><dt>الاسم</dt><dd>سلمى مدحت</dd><dt>الصف الدراسي</dt><dd>رابعة ابتدائي</dd></dl><p>تعديل بيانات الحساب سيكون متاحًا قريبًا.</p></dialog>
+  </div>;
 }

@@ -1,113 +1,135 @@
 "use client";
-/**
- * TimerModal — the green dial screen (image 2).
- * Opens when the play button is tapped.
- * User drags/taps a value (5, 10, 15, 20, 25 min) then confirms.
- *
- * RTL: logical spacing throughout.
- */
-import { useState } from "react";
-import { useTimer } from "@/lib/timer-context";
 
-const OPTIONS = [5, 10, 15, 20, 25];
+import { useEffect, useRef, useState, type PointerEvent, type KeyboardEvent } from "react";
+import { useTimer } from "@/lib/timer-context";
+import { angleDelta, clampMinutes, DEGREES_PER_MINUTE, MAX_MINUTES, MIN_MINUTES, MINUTE_STEP } from "@/lib/study-timer";
+import { StudentHeader } from "./StudentHeader";
+import { BottomNav } from "./BottomNav";
+import styles from "./TimerModal.module.css";
 
 export function TimerModal() {
-  const { state, startTimer, stopTimer } = useTimer();
-  const [selected, setSelected] = useState(15);
+  const { state } = useTimer();
+  return state === "selecting" ? <TimerPicker /> : null;
+}
 
-  if (state !== "selecting") return null;
+function TimerPicker() {
+  const { startTimer, stopTimer } = useTimer();
+  const [selected, setSelected] = useState(15);
+  const [dragging, setDragging] = useState(false);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const dial = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ angle: number; minutes: number } | null>(null);
+  const close = useRef(stopTimer);
+  close.current = stopTimer;
+
+  useEffect(() => {
+    const element = dialog.current!;
+    const previousOverflow = document.body.style.overflow;
+    element.showModal();
+    document.body.style.overflow = "hidden";
+    dial.current?.focus({ preventScroll: true });
+    return () => { element.close(); document.body.style.overflow = previousOverflow; };
+  }, []);
+
+  useEffect(() => {
+    const element = dial.current!;
+    let accumulated = 0;
+    let lastWheel = 0;
+    const roll = (event: WheelEvent) => {
+      if (event.ctrlKey) return;
+      event.preventDefault();
+      if (event.timeStamp - lastWheel > 180) accumulated = 0;
+      lastWheel = event.timeStamp;
+      const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+      accumulated += delta * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 160 : 1);
+      if (Math.abs(accumulated) < 32) return;
+      const steps = Math.trunc(accumulated / 32);
+      accumulated %= 32;
+      setSelected((minutes) => clampMinutes(minutes + Math.sign(steps) * Math.min(3, Math.abs(steps)) * MINUTE_STEP));
+    };
+    element.addEventListener("wheel", roll, { passive: false });
+    return () => element.removeEventListener("wheel", roll);
+  }, []);
+
+  function pointerAngle(event: PointerEvent<HTMLDivElement>) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    return Math.atan2(event.clientY - bounds.top - bounds.height / 2, event.clientX - bounds.left - bounds.width / 2) * 180 / Math.PI;
+  }
+
+  function beginDrag(event: PointerEvent<HTMLDivElement>) {
+    if (!event.isPrimary || event.button !== 0) return;
+    event.currentTarget.focus({ preventScroll: true });
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drag.current = { angle: pointerAngle(event), minutes: selected };
+    setDragging(true);
+  }
+
+  function moveDrag(event: PointerEvent<HTMLDivElement>) {
+    if (!drag.current) return;
+    const angle = pointerAngle(event);
+    const delta = angleDelta(drag.current.angle, angle);
+    drag.current.angle = angle;
+    drag.current.minutes = Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, drag.current.minutes - delta / DEGREES_PER_MINUTE));
+    setSelected(clampMinutes(drag.current.minutes));
+  }
+
+  function endDrag(event: PointerEvent<HTMLDivElement>) {
+    drag.current = null;
+    setDragging(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
+  function handleKeys(event: KeyboardEvent<HTMLDivElement>) {
+    const changes: Record<string, number> = { ArrowRight: 5, ArrowUp: 5, ArrowLeft: -5, ArrowDown: -5, PageUp: 15, PageDown: -15 };
+    if (event.key in changes) {
+      event.preventDefault();
+      setSelected((minutes) => clampMinutes(minutes + changes[event.key]));
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      setSelected(event.key === "Home" ? MIN_MINUTES : MAX_MINUTES);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      startTimer(selected);
+    }
+  }
+
+  const labels = Array.from({ length: 7 }, (_, i) => selected + (i - 3) * MINUTE_STEP).filter((value) => value >= MIN_MINUTES && value <= MAX_MINUTES);
 
   return (
-    /* Full-screen overlay */
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-[#0E0E0E]"
-         style={{ maxWidth: 430, margin: "0 auto" }}>
-
-      {/* Top spacer */}
-      <div className="flex-1" />
-
-      {/* Mascot + speech bubble */}
-      <div className="relative flex flex-col items-center px-6">
-        {/* Speech bubble */}
-        <div className="mb-4 rounded-2xl bg-[#1C1C1C] px-6 py-4 text-center shadow-lg">
-          <p className="text-2xl font-bold leading-snug text-white">
-            يلا بينا،<br />هنذاكر قد ايه النهاردة؟
-          </p>
+    <dialog ref={dialog} className={styles.dialog} aria-labelledby="timer-question" onCancel={(event) => { event.preventDefault(); close.current(); }}>
+      <div className={styles.screen}>
+        <div className={styles.header}><StudentHeader /></div>
+        <div className={styles.scene}>
+          <button type="button" onClick={stopTimer} className={styles.close} aria-label="إغلاق اختيار الوقت">×</button>
+          <div className={styles.bubble}><h2 id="timer-question">يلا بينا،<br />هنذاكر قد<br />إيه النهاردة؟</h2></div>
+          <img className={styles.mom} src="/mom-timer.png" alt="ماما بتشجعك تبدأ المذاكرة" width={398} height={423} draggable={false} />
+          <div className={styles.dialEntrance}>
+            <div className={styles.pointer} aria-hidden="true" />
+            <div ref={dial} className={`${styles.dial} ${dragging ? styles.dragging : ""}`} role="slider" tabIndex={0} aria-label="مدة المذاكرة بالدقائق" aria-valuemin={MIN_MINUTES} aria-valuemax={MAX_MINUTES} aria-valuenow={selected} aria-valuetext={`${selected} دقيقة`} aria-describedby="dial-help" dir="ltr" onPointerDown={beginDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onLostPointerCapture={() => { drag.current = null; setDragging(false); }} onKeyDown={handleKeys}>
+              <svg viewBox="0 0 600 600" className={styles.face} aria-hidden="true">
+                <circle cx="300" cy="300" r="300" fill="#619188" />
+                <circle cx="300" cy="300" r="222" fill="#466f67" />
+                <g className={styles.rotor} style={{ transform: `rotate(${-(selected - 15) * DEGREES_PER_MINUTE}deg)` }}>
+                  {Array.from({ length: 75 }, (_, i) => <path key={i} d="M300 40v13" transform={`rotate(${i * 4.8} 300 300)`} stroke="#a0c7bd" strokeWidth="8" />)}
+                  {labels.map((minutes) => <g key={minutes} transform={`rotate(${(minutes - 15) * DEGREES_PER_MINUTE} 300 300)`}><text x="300" y="113" textAnchor="middle" fill="white" fontSize="29" fontWeight="800">{minutes}</text></g>)}
+                </g>
+                <path d="M46 264A257 257 0 0 1 300 43" stroke="#f6fff9" strokeWidth="12" fill="none" />
+                <path d="M300 27v37" stroke="#d2fff5" strokeWidth="12" strokeLinecap="round" />
+              </svg>
+            </div>
+          </div>
+          <div className={styles.selection}>
+            <p className={styles.duration}><strong>{selected}</strong> دقيقة</p>
+            <p id="dial-help">لف الدائرة أو مرّر لاختيار وقتك</p>
+            <div className={styles.adjustments}>
+              <button type="button" onClick={() => setSelected((n) => clampMinutes(n - 5))} disabled={selected === MIN_MINUTES} aria-label="تقليل الوقت خمس دقائق">−</button>
+              <span>اضغط ▶ وابدأ المذاكرة</span>
+              <button type="button" onClick={() => setSelected((n) => clampMinutes(n + 5))} disabled={selected === MAX_MINUTES} aria-label="زيادة الوقت خمس دقائق">+</button>
+            </div>
+          </div>
         </div>
-
-        {/* Mascot placeholder — user will add image to /public */}
-        <div className="h-48 w-48">
-          {/* RTL: mirror icon — mascot image, no transform needed (character, not arrow) */}
-          <img
-            src="/mascot.png"
-            alt="mascot"
-            className="h-full w-full object-contain"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
-        </div>
+        <BottomNav timerSelection={{ minutes: selected, start: () => startTimer(selected) }} />
       </div>
-
-      {/* Green dial arc */}
-      <div className="relative w-full" style={{ height: 260 }}>
-        {/* Arc background SVG */}
-        <svg
-          viewBox="0 0 430 260"
-          className="absolute inset-0 w-full h-full"
-          preserveAspectRatio="xMidYMid meet"
-        >
-          {/* Outer arc fill */}
-          <path
-            d="M -20 260 Q 215 -60 450 260 Z"
-            fill="#2D7A5E"
-          />
-          {/* Inner cutout */}
-          <path
-            d="M 40 260 Q 215 20 390 260 Z"
-            fill="#0E0E0E"
-          />
-        </svg>
-
-        {/* Minute options along the arc */}
-        <div className="absolute inset-0 flex items-end justify-around pb-8 px-6">
-          {OPTIONS.map((min) => (
-            <button
-              key={min}
-              onClick={() => setSelected(min)}
-              className={[
-                "flex flex-col items-center gap-1 transition-all",
-                selected === min ? "scale-125" : "opacity-60",
-              ].join(" ")}
-            >
-              {selected === min && (
-                <div className="h-2 w-2 rounded-full bg-white" />
-              )}
-              <span className={[
-                "font-bold",
-                selected === min ? "text-white text-xl" : "text-[#9A9A9A] text-base",
-              ].join(" ")}>
-                {min}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Start button */}
-      <div className="flex w-full gap-3 px-6 pb-10">
-        <button
-          onClick={() => stopTimer()}
-          className="flex-1 rounded-2xl border border-[#2D2D2D] py-4 text-[#9A9A9A] font-semibold"
-        >
-          إلغاء
-        </button>
-        <button
-          onClick={() => startTimer(selected)}
-          className="flex-[2] rounded-2xl bg-[#2D8A6A] py-4 font-bold text-white text-lg"
-        >
-          ابدأ {selected} دقيقة
-        </button>
-      </div>
-    </div>
+    </dialog>
   );
 }

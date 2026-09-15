@@ -78,10 +78,13 @@ export interface LessonSectionOut {
 }
 
 export interface LessonDetailOut {
-  id: number;
-  title: string;
-  objective: string;
-  is_published: boolean;
+  lesson: {
+    id: number;
+    subject_id: number;
+    order_index: number;
+    title: string;
+    objective: string;
+  };
   sections: LessonSectionOut[];
 }
 

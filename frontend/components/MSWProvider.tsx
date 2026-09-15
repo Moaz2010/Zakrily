@@ -1,39 +1,37 @@
 "use client";
 
 /**
- * MSWProvider — starts the Mock Service Worker in development.
- *
- * Rendered as the first child of the root layout only when
- * NODE_ENV === "development". In production the component returns
- * children immediately without starting any worker.
- *
- * RTL note: this component has no UI — it's purely behavioural.
+ * Explicit preview mode works in local and deployed builds.
+ * Development defaults to preview; production requires USE_MOCKS=true.
  */
 
 import { useEffect, useState } from "react";
 
+const useMocks = process.env.NEXT_PUBLIC_USE_MOCKS === "true" ||
+  (process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_USE_MOCKS !== "false");
+
 export function MSWProvider({ children }: { children: React.ReactNode }) {
-  const [ready, setReady] = useState(
-    process.env.NODE_ENV !== "development" || process.env.NEXT_PUBLIC_USE_MOCKS === "false"
-  );
+  const [ready, setReady] = useState(!useMocks);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== "development" || process.env.NEXT_PUBLIC_USE_MOCKS === "false") return;
+    if (!useMocks) return;
 
-    // Dynamically import so the MSW bundle is never included in production.
     import("../mocks/browser").then(({ worker }) => {
-      worker
+      return worker
         .start({
-          onUnhandledRequest: "warn",
+          onUnhandledRequest: "bypass",
           serviceWorker: { url: "/mockServiceWorker.js" },
         })
         .then(() => setReady(true));
-    });
+    }).catch(() => setFailed(true));
   }, []);
 
   if (!ready) {
-    // Prevents a flash of un-mocked content on first load in dev.
-    return null;
+    return <div className="min-h-screen bg-[#F7F7F7] text-[#292C32] flex flex-col items-center justify-center gap-4 p-6 text-center" role={failed ? "alert" : "status"}>
+      <p>{failed ? "تعذر تحميل التطبيق. أعد المحاولة." : "جاري تحميل ذاكرلي…"}</p>
+      {failed && <button className="rounded-xl bg-[#527f76] text-white px-5 py-3" onClick={() => window.location.reload()}>إعادة المحاولة</button>}
+    </div>;
   }
 
   return <>{children}</>;

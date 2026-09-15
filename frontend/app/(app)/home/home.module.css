@@ -1,0 +1,12 @@
+.page { min-height: 100svh; background: #f7f7f7; display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 112px; margin-bottom: -96px; }
+.activity { border-radius: 17px; padding: 12px 17px 16px; background: #dfe0e0; color: #292c32; }
+.activity h2 { font-size: 23px; line-height: 1.5; font-weight: 850; margin-bottom: 12px; }
+.chart { display: flex; gap: 10px; direction: ltr; }
+.column { min-width: 0; flex: 1; text-align: center; }
+.track { height: clamp(154px, 44vw, 188px); display: flex; flex-direction: column-reverse; gap: 3px; background: #eeefec; border-radius: 6px; padding: 2px; }
+.segment { height: calc((100% - 9px) / 4); border-radius: 5px; flex-shrink: 0; }
+.day { display: block; font-size: 12px; margin-top: 9px; color: #151515; }
+.reminder { position: relative; min-height: 112px; border-radius: 16px; margin-top: 1px; background: #292c32; display: flex; align-items: center; justify-content: flex-end; padding: 12px; color: #cdcdcf; }
+.reminder img { position: absolute; left: -8px; bottom: 0; width: 145px; height: 146px; object-fit: contain; object-position: bottom; pointer-events: none; }
+.reminder p { width: 64%; font-size: 24px; font-weight: 850; line-height: 1.3; position: relative; }
+@media (max-width: 360px) { .page { padding-inline: 14px; } .activity { padding-inline: 13px; } .chart { gap: 8px; } .activity h2 { font-size: 21px; } .reminder p { font-size: 20px; } .reminder img { width: 125px; height: 130px; } }

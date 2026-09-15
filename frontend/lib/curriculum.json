@@ -1,0 +1,36 @@
+[
+  {
+    "id": 1, "slug": "english", "name_ar": "اللغة الإنجليزية", "name_en": "English",
+    "unit": "Unit 1: The Five Senses", "unit_ar": "الوحدة ١", "theme": null,
+    "lessons": [
+      { "id": 1, "order": 1, "title": "What are the Five Senses?", "concept": null },
+      { "id": 2, "order": 2, "title": "Healthy Habits", "concept": null },
+      { "id": 3, "order": 3, "title": "Story Time – Goha's Great Meal", "concept": null }
+    ]
+  },
+  {
+    "id": 2, "slug": "math", "name_ar": "الرياضيات", "name_en": "Math",
+    "unit": "Unit 1: Place Value", "unit_ar": "الوحدة ١", "theme": "Theme One: Number Sense and Operations",
+    "lessons": [
+      { "id": 4, "order": 1, "title": "Big Numbers! Changing Values", "concept": "Concept 1: Reinforcing Place Value" },
+      { "id": 5, "order": 2, "title": "Big Numbers! Changing Values", "concept": "Concept 1: Reinforcing Place Value" },
+      { "id": 6, "order": 3, "title": "Many Forms to Write Numbers — Composing and Decomposing", "concept": "Concept 1: Reinforcing Place Value" },
+      { "id": 7, "order": 4, "title": "Many Forms to Write Numbers — Composing and Decomposing", "concept": "Concept 1: Reinforcing Place Value" },
+      { "id": 8, "order": 5, "title": "Comparing Big Numbers — Comparing Numbers in Multiple Forms", "concept": "Concept 2: Using Place Value" },
+      { "id": 9, "order": 6, "title": "Comparing Big Numbers — Comparing Numbers in Multiple Forms", "concept": "Concept 2: Using Place Value" },
+      { "id": 10, "order": 7, "title": "Descending and Ascending Numbers", "concept": "Concept 2: Using Place Value" },
+      { "id": 11, "order": 8, "title": "Rounding Rules", "concept": "Concept 2: Using Place Value" }
+    ]
+  },
+  {
+    "id": 3, "slug": "science", "name_ar": "العلوم", "name_en": "Science",
+    "unit": "Chapter 1: Nature in Our Surroundings", "unit_ar": "الفصل ١", "theme": null,
+    "lessons": [
+      { "id": 12, "order": 1, "title": "Let's Find Living Organisms", "concept": null },
+      { "id": 13, "order": 2, "title": "How to Observe", "concept": null },
+      { "id": 14, "order": 3, "title": "Colors and Shapes of Living Organisms", "concept": null },
+      { "id": 15, "order": 4, "title": "Different Places, Different Living Organisms", "concept": null },
+      { "id": 16, "order": 5, "title": "Desert Living Organisms", "concept": null }
+    ]
+  }
+]
