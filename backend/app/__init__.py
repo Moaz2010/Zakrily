@@ -1,1 +1,0 @@
-"""Zakrely backend application."""
