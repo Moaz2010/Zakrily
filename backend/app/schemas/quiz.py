@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 
 from app.schemas.common import QuestionTypeEnum, SkillTagEnum
 
@@ -20,7 +20,8 @@ class QuizOut(BaseModel):
 
 class AnswerSubmission(BaseModel):
     question_id: int
-    answer: str
+    answer: str = Field(validation_alias=AliasChoices("answer", "given_answer"))
+
 
 
 class QuizSubmitRequest(BaseModel):

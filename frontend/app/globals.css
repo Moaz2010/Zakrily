@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+/* ── Zakrely Design Tokens ─────────────────────────────────────────────────── */
+:root {
+  /* App shell */
+  --color-bg:          #0E0E0E;
+  --color-bg-card:     #1C1C1C;
+  --color-bg-card-2:   #252525;
+
+  /* Subject brand colours */
+  --color-science:     #1E5C4A;   /* dark teal  */
+  --color-science-mid: #2D7A5E;
+  --color-math:        #6B2A28;   /* dark terracotta */
+  --color-math-mid:    #8B3A38;
+  --color-english:     #2A4A6B;   /* dark blue */
+  --color-english-mid: #3A6A8B;
+
+  /* Accent */
+  --color-teal:        #2D8A6A;
+  --color-teal-light:  #3DAA82;
+  --color-amber:       #D4813A;   /* streak / fire */
+  --color-red-node:    #B84040;   /* current node */
+  --color-brown-node:  #5C3D30;   /* unlocked node */
+
+  /* Text */
+  --color-text:        #F5F5F5;
+  --color-text-muted:  #9A9A9A;
+
+  /* Nav */
+  --color-nav-bg:      #141414;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  /* Mobile-first — simulate phone container */
+  min-height: 100svh;
+}
+
+/* ── Mobile container ─────────────────────────────────────────────────────── */
+/* All screens are designed for ~390px phone width, centered on desktop */
+.phone-shell {
+  max-width: 430px;
+  margin-inline: auto;
+  min-height: 100svh;
+  position: relative;
+  overflow-x: hidden;
+  background: var(--color-bg);
+}
+
+/* ── RTL: ENFORCED — no ml-/mr-/pl-/pr- allowed ───────────────────────────── */
+/* Logical property equivalents: ms- me- ps- pe- text-start text-end         */

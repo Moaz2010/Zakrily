@@ -9,7 +9,7 @@ router = APIRouter(tags=["skills"])
 
 
 @router.get("/me/skills", response_model=list[SkillBreakdownItem])
-def my_skills(subject: SubjectSlugEnum, current_user: User = Depends(get_current_user)):
+def my_skills(subject: SubjectSlugEnum | None = None, current_user: User = Depends(get_current_user)):
     return [
         SkillBreakdownItem(skill_tag=tag, correct=0, total=0, accuracy=None, insufficient_data=True)
         for tag in SkillTagEnum
