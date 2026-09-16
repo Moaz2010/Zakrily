@@ -44,5 +44,6 @@ class Question(Base):
     options: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     correct_answer: Mapped[str] = mapped_column(Text)
     explanation: Mapped[str] = mapped_column(Text, default="")
+    grading_data: Mapped[dict] = mapped_column(JSON, default=dict)
     source_chunk_id: Mapped[int | None] = mapped_column(ForeignKey("content_chunks.id"), nullable=True)
     review_status: Mapped[ReviewStatus] = mapped_column(Enum(ReviewStatus), default=ReviewStatus.pending)

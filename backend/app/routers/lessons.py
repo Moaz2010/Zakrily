@@ -9,8 +9,47 @@ from app.schemas.lesson import LessonDetail
 from app.schemas.quiz import QuizOut
 from app.services.grading import approved_questions, public_question
 from app.services.progress import accessible_lesson
+from app.services import lesson_activity
+from app.schemas.activity import ActivityState, ActivityAnswer, ActivityProgress
 
 router = APIRouter(tags=["lessons"])
+
+
+@router.get("/lessons/{lesson_id}/activity", response_model=ActivityState)
+def get_activity(lesson_id: int, practice: bool = False, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return lesson_activity.state(db, current_user.id, lesson_id, practice)
+
+
+@router.post("/lessons/{lesson_id}/activity/answer", response_model=ActivityState)
+def answer_activity(lesson_id: int, payload: ActivityAnswer, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return lesson_activity.submit(db, current_user.id, lesson_id, payload)
+
+
+@router.post("/lessons/{lesson_id}/activity/restart", response_model=ActivityState)
+def restart_activity(lesson_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return lesson_activity.restart(db, current_user.id, lesson_id)
+
+
+@router.put("/lessons/{lesson_id}/activity/progress", response_model=ActivityState)
+def save_activity_progress(lesson_id: int, payload: ActivityProgress, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    lesson, bank, progress = lesson_activity.load(db, current_user.id, lesson_id, lock=True)
+    # Lesson 2 has six existing cards and five source-based memory cards.
+    card_count = {1: 20, 2: 11}.get(lesson.order_index, payload.learning_total or 500)
+    if any(step not in range(card_count) for step in payload.learned_steps):
+        raise HTTPException(422, "Unknown learning stop")
+    progress = lesson_activity.ensure_progress(db, current_user.id, lesson_id, progress)
+    saved = dict(progress.learning_state or {})
+    saved["learning_total"] = card_count
+    saved["learned_steps"] = sorted(set(saved.get("learned_steps", [])) | set(payload.learned_steps))
+    if payload.draft:
+        if payload.draft.question_id not in {q.id for q, _ in bank} or len(payload.draft.answer) > 4000:
+            raise HTTPException(422, "Invalid draft")
+        latest, _ = lesson_activity.evidence(db, current_user.id, bank)
+        if payload.draft.question_id not in latest:
+            saved["drafts"] = {**saved.get("drafts", {}), str(payload.draft.question_id): payload.draft.answer}
+    progress.learning_state = saved
+    db.commit()
+    return lesson_activity.state(db, current_user.id, lesson_id)
 
 
 @router.get("/lessons/{lesson_id}", response_model=LessonDetail)

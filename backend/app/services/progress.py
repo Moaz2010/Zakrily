@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models.attempt import Attempt, LessonProgress, LessonStatus
 from app.models.lesson import Lesson
-from app.models.question import Question
+from app.models.question import Question, ReviewStatus
 from app.models.subject import Subject
 from app.schemas.subject import PathNode
 
@@ -21,11 +21,35 @@ def lesson_path(db: Session, user_id: int, subject_id: int) -> list[PathNode]:
     ).filter(Lesson.subject_id == subject_id).order_by(Lesson.order_index, Lesson.id).all()
     previous_completed = True
     nodes = []
+    # Count distinct work, so practice and review never inflate or erase progress.
+    question_ids = defaultdict(set)
+    for lesson_id, question_id in db.query(Question.lesson_id, Question.id).join(
+        Lesson, Question.lesson_id == Lesson.id,
+    ).filter(Lesson.subject_id == subject_id, Question.review_status == ReviewStatus.approved):
+        question_ids[lesson_id].add(question_id)
+    attempted = {qid for (qid,) in db.query(Attempt.question_id).join(
+        Question, Attempt.question_id == Question.id,
+    ).join(Lesson, Question.lesson_id == Lesson.id).filter(
+        Attempt.user_id == user_id, Lesson.subject_id == subject_id).distinct()}
+    subject = db.get(Subject, subject_id)
     for lesson, progress in rows:
         completed = progress is not None and progress.status == LessonStatus.completed
         status = "completed" if completed else "unlocked" if previous_completed else "locked"
+        saved = (progress.learning_state or {}) if progress else {}
+        parts = []
+        learning_total = saved.get("learning_total")
+        if subject.slug.value == "science":
+            learning_total = {1: 20, 2: 11}.get(lesson.order_index, learning_total)
+        if learning_total:
+            parts.append(len({s for s in saved.get("learned_steps", []) if 0 <= s < learning_total}) / learning_total)
+        ids = question_ids[lesson.id]
+        if ids:
+            reflections = {int(qid) for qid in saved.get("reflections", {})}
+            parts.append(len(ids & (attempted | reflections)) / len(ids))
+        fraction = 1.0 if completed else sum(parts) / len(parts) if parts else 0.0
         nodes.append(PathNode(lesson_id=lesson.id, order=lesson.order_index,
                               title=lesson.title, status=status,
+                              progress=fraction,
                               score=progress.score if progress else None))
         previous_completed = completed
     return nodes

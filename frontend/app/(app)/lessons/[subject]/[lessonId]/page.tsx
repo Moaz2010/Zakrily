@@ -6,6 +6,9 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { lessonsApi, subjectsApi, type LessonDetailOut, type PathNodeOut } from "@/lib/api";
 import { getSubject } from "@/lib/curriculum";
 import { TrainingActivities } from "@/components/TrainingActivities";
+import { ScienceLessonChat } from "@/components/ScienceLessonChat";
+import { ScienceLearn } from "@/components/ScienceLearn";
+import { GenericLearn } from "@/components/GenericLearn";
 import { percentage } from "@/lib/learner-context";
 import styles from "../path.module.css";
 
@@ -38,7 +41,7 @@ export default function LessonDetailPage() {
 
   if (!curriculum || failed) return <div className="p-6" role="alert"><h1>تعذر تحميل الدرس</h1><Link href="/lessons" className="underline">العودة للمواد</Link></div>;
   if (!detail || !lesson) return <p className="p-6" role="status">جاري تحميل الدرس…</p>;
-  const progress = nodes.length ? Math.round(nodes.filter((node) => node.status === "completed").length / nodes.length * 100) : 0;
+  const progress = nodes.length ? Math.round(nodes.reduce((total, node) => total + (node.progress ?? (node.status === "completed" ? 1 : 0)), 0) / nodes.length * 100) : 0;
 
   return <div className={styles.page} style={{ "--subject-color": COLORS[subject] } as CSSProperties}>
     <header className={styles.header}>
@@ -50,8 +53,23 @@ export default function LessonDetailPage() {
       <div className={styles.unitRow}><div><h2>{curriculum.unit_ar}</h2><p>الدرس {lesson.order}</p></div><div className={styles.tabs} role="group" aria-label="نوع النشاط"><button onClick={() => setMode("lesson")} aria-pressed={mode === "lesson"}>📖 شرح</button><button onClick={() => setMode("practice")} aria-pressed={mode === "practice"}>✎ تدريبات</button></div></div>
       <p className={styles.unitTitle} dir="ltr" lang="en">{detail?.lesson.title ?? lesson.title}</p>
     </section>
-    {lesson.status === "locked" ? <p className="p-6">أكمل الدرس السابق لفتح هذا الدرس.</p> : mode === "practice" ? <TrainingActivities subject={subject} lessonId={lesson.lesson_id} /> : <section className="px-5 py-6 text-sm leading-7">
-      {failed ? <p role="alert">تعذر تحميل الدرس. <Link href={`/lessons/${subject}`} className="underline">العودة للمسار</Link></p> : !detail ? <p role="status">جاري التحميل…</p> : detail.sections.length ? detail.sections.map((section) => <article key={section.id} className="mb-4 rounded-2xl bg-[#eeeee9] p-4" dir="auto"><h3 className="font-bold">{section.heading}</h3><p className="whitespace-pre-wrap">{section.body_md}</p></article>) : <p className="rounded-2xl bg-[#eeeee9] p-4">تمت إضافة الدرس إلى المنهج. شرح الدرس سيكون متاحًا قريبًا.</p>}
-    </section>}
+    {lesson.status === "locked" ? (
+      <p className="p-6">أكمل الدرس السابق لفتح هذا الدرس.</p>
+    ) : mode === "practice" ? (
+      <TrainingActivities subject={subject} lessonId={lesson.lesson_id} scienceLesson={subject === "science"} />
+    ) : subject === "science" && detail.sections.length > 0 ? (
+      <ScienceLearn key={`learn-${lesson.lesson_id}`} sections={detail.sections} lessonId={lesson.lesson_id} onProgress={() => { subjectsApi.path(subject).then(setNodes).catch(() => {}); }} onCompletePractice={() => setMode("practice")} />
+    ) : (
+      <GenericLearn key={`generic-${lesson.lesson_id}`} sections={detail.sections} onCompletePractice={() => setMode("practice")} />
+    )}
+    {lesson.status !== "locked" && mode === "lesson" && (
+      <ScienceLessonChat
+        key={`chat-${lesson.lesson_id}`}
+        lessonId={lesson.lesson_id}
+        sections={detail.sections}
+        subject={subject}
+        lessonTitle={detail?.lesson.title ?? lesson.title}
+      />
+    )}
   </div>;
 }

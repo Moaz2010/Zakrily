@@ -18,3 +18,4 @@ class PathNode(BaseModel):
     title: str
     status: LessonStatusEnum
     score: float | None = None
+    progress: float = 0

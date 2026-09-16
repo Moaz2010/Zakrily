@@ -1,0 +1,656 @@
+/* Zakrely Warm Organic Design System - Duolingo Gamified View */
+
+.learnContainer {
+  display: flex;
+  flex-direction: column;
+  height: clamp(480px, calc(100vh - 210px), 720px);
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  color: var(--color-text, #292c32);
+  --green: var(--subject-color, #527f76);
+  --green-dark: #375b54;
+  --green-light: #edf3e7;
+  --amber: #d4813a;
+  --warm-bg: #f7f7f6;
+  --card-bg: #fafbf8;
+  --card-border: #d8ddd6;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Duolingo Header Progress Bar */
+.duoHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.duoBadge {
+  background: #f6ead4;
+  color: #8a5822;
+  border: 1.5px solid #ebdcc0;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.stepCount {
+  color: #637168;
+  font-size: 13px;
+}
+
+.duoProgress {
+  height: 10px;
+  background: #e2e7e0;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+}
+
+.duoProgressBar {
+  height: 100%;
+  background: var(--green);
+  border-radius: inherit;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Duolingo Viewport Box (Zero Page Scroll) */
+.duoViewport {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: #c4cebf transparent;
+}
+
+/* Card Styling */
+.duoCard {
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
+  border-bottom: 4px solid #c4cebf;
+  border-radius: 24px;
+  padding: 20px 18px;
+  animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mascotRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.duoHeroIcon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background: var(--green-light);
+  font-size: 30px;
+  flex-shrink: 0;
+  transform: rotate(-4deg);
+  border: 1.5px solid #c4cebf;
+}
+
+.mascotBubble {
+  flex: 1;
+}
+
+.cardBadge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 1px;
+  color: var(--green);
+  background: var(--green-light);
+  padding: 3px 9px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  border: 1px solid #c4cebf;
+}
+
+.mascotBubble h3 {
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.35;
+  margin: 0;
+  color: #292c32;
+}
+
+.cardHint {
+  font-size: 12px;
+  color: #637168;
+  margin: -6px 0 4px;
+}
+
+.cardContentBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Celebration Card */
+.duoCelebrationCard {
+  background: #edf3e7;
+  border: 2px solid #a9c0ad;
+  border-bottom: 5px solid #527f76;
+  border-radius: 26px;
+  padding: 32px 24px;
+  text-align: center;
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.celebrationIcon {
+  font-size: 50px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.duoCelebrationCard h3 {
+  font-size: 22px;
+  font-weight: 900;
+  color: #292c32;
+  margin-bottom: 8px;
+}
+
+.duoCelebrationCard p {
+  font-size: 14px;
+  color: #536b62;
+  line-height: 1.6;
+}
+
+/* Action Footer with Duolingo 3D Buttons */
+.duoFooter {
+  display: flex;
+  gap: 12px;
+  padding-top: 14px;
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+.duoBtnBack {
+  padding: 12px 20px;
+  border-radius: 16px;
+  background: #e7e9e1;
+  color: #4b6454;
+  font-size: 13px;
+  font-weight: 800;
+  border: 1.5px solid #d5dfd0;
+  border-bottom: 3.5px solid #c4cebf;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.duoBtnBack:active:not(:disabled) {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+.duoBtnBack:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.duoBtnNext {
+  flex: 1;
+  padding: 14px 24px;
+  border-radius: 16px;
+  background: var(--green);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 850;
+  border: 1.5px solid var(--green-dark);
+  border-bottom: 4px solid var(--green-dark);
+  cursor: pointer;
+  transition: all 0.1s ease;
+  box-shadow: 0 3px 0 #345e53;
+}
+
+.duoBtnNext:active:not(:disabled) {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+.duoBtnComplete {
+  background: #527f76 !important;
+  border-color: #345e53 !important;
+}
+
+/* Warm Component Blocks */
+.eyebrow {
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 1.1px;
+  color: var(--green);
+}
+
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.compare article {
+  border: 1.5px solid #d5dfd0;
+  border-bottom-width: 4px;
+  border-radius: 20px;
+  padding: 16px 12px;
+  text-align: center;
+}
+
+.living {
+  background: #edf3e7;
+}
+
+.nonliving {
+  background: #f0ece5;
+  border-color: #e1dbd0 !important;
+}
+
+.bigEmoji {
+  display: block;
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.compare h4 {
+  font-size: 13px;
+  font-weight: 850;
+  margin-bottom: 6px;
+}
+
+.compare p {
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.pill {
+  display: block;
+  margin-top: 10px;
+  border-radius: 10px;
+  background: #ffffffa6;
+  padding: 6px 4px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #425c4a;
+}
+
+.idea {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 18px;
+  padding: 14px;
+  background: #f7ecd7;
+  border: 1.5px solid #ebdcc0;
+  border-bottom: 4px solid #d4813a;
+  font-size: 12px;
+}
+
+.idea > span {
+  font-size: 24px;
+}
+
+.idea strong {
+  font-size: 13px;
+  color: #78350f;
+}
+
+.idea p {
+  margin-top: 2px;
+  line-height: 1.5;
+  color: #78350f;
+}
+
+.stack,
+.exploreSteps,
+.habitats,
+.wordGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.reveal {
+  border: 1.5px solid #dfe4db;
+  border-bottom-width: 3px;
+  border-radius: 16px;
+  background: #ffffff;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.reveal summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 750;
+}
+
+.reveal summary::-webkit-details-marker {
+  display: none;
+}
+
+.reveal summary > span:first-child {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.plus {
+  margin-inline-start: auto;
+  color: var(--green);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.reveal[open] {
+  border-color: #a9c0ad;
+}
+
+.reveal[open] > summary {
+  background: #edf3e7;
+}
+
+.revealed {
+  padding: 12px;
+}
+
+.source {
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.source p + p {
+  margin-top: 8px;
+}
+
+.source strong {
+  font-weight: 850;
+  color: #292c32;
+}
+
+.bullet {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.bullet > span:first-child {
+  color: var(--green);
+  font-size: 11px;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding-block: 6px;
+  border-bottom: 1px solid #e3e6de;
+}
+
+.challenge {
+  padding: 16px;
+  background: #eaf0ed;
+  border: 1.5px solid #d8e1dc;
+  border-bottom: 4px solid #b2c4bb;
+  border-radius: 20px;
+}
+
+.challenge h4 {
+  margin: 6px 0 12px;
+  font-size: 15px;
+  font-weight: 850;
+  color: #292c32;
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.choices button {
+  background: #ffffff;
+  border: 2px solid #d5dfd7;
+  border-bottom-width: 4px;
+  border-radius: 14px;
+  padding: 10px 4px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.choices button > span {
+  display: block;
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.choices button[aria-pressed="true"] {
+  border-color: var(--green);
+  background: #dfeadd;
+}
+
+.feedback {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #ffffff;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.scientistQuestion {
+  padding: 16px;
+  background: #eaf0ed;
+  border: 1.5px solid #d8e1dc;
+  border-bottom: 4px solid #b2c4bb;
+  border-radius: 20px;
+}
+
+.scientistQuestion h4 {
+  font-size: 16px;
+  font-weight: 850;
+  margin: 6px 0 12px;
+}
+
+.scientistQuestion label {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 12px 0 6px;
+}
+
+.scientistQuestion textarea {
+  display: block;
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  border: 2px solid #cbdacf;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 10px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.scientistQuestion > .helper {
+  margin: 6px 0 12px;
+  font-size: 11px;
+}
+
+.compareAnswer {
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--green);
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 3px 0 #35584f;
+}
+
+.exampleAnswer {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.conceptCard {
+  border-radius: 20px;
+  background: #edf3e7;
+  border: 1.5px solid #d4dfcb;
+  border-bottom: 4px solid #b8c9b2;
+  padding: 18px 16px;
+}
+
+.conceptCard h4 {
+  font-size: 18px;
+  font-weight: 850;
+  margin: 6px 0 10px;
+}
+
+.conceptCard > p {
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.needs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.needs span {
+  background: #ffffff;
+  border: 1px solid #c4cebf;
+  border-radius: 10px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.helper {
+  font-size: 11px;
+  color: #627164;
+  margin-top: -6px;
+}
+
+.safety {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border: 1.5px solid #eddbb5;
+  border-bottom: 4px solid #d4813a;
+  background: #faf0dc;
+  border-radius: 18px;
+}
+
+.safety > span {
+  font-size: 24px;
+}
+
+.safety h4 {
+  font-size: 14px;
+  font-weight: 850;
+  margin-bottom: 6px;
+}
+
+.deck {
+  padding: 12px;
+  background: #f6f7f2;
+  border-radius: 14px;
+}
+
+.deckHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  margin-bottom: 10px;
+  color: #5b7562;
+}
+
+.deckControls {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.deckControls button {
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: #e3eadf;
+  font-size: 11px;
+  font-weight: 750;
+  border: none;
+  cursor: pointer;
+}
+
+.progressNote {
+  text-align: center;
+  color: #647066;
+  font-size: 11px;
+  margin-top: 8px;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 480px) {
+  .learnContainer {
+    padding: 8px 10px;
+  }
+  .duoCard {
+    padding: 14px 12px;
+  }
+  .compare {
+    grid-template-columns: 1fr;
+  }
+}

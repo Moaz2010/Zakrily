@@ -1,5 +1,6 @@
 "use client";
 
+import { ScienceActivityRoute } from "@/components/ScienceActivityRoute";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { practiceApi, type QuestionOut, type PracticeSubmitResponse } from "@/lib/api";
@@ -12,6 +13,11 @@ const SUBJECT_LABELS: Record<string, { ar: string; bg: string }> = {
 };
 
 export default function PracticePage() {
+  const params = useParams();
+  return params.subject === "science" ? <ScienceActivityRoute lessonId={Number(params.lessonId)} practice={true} fallback={<LegacyPracticePage />} /> : <LegacyPracticePage />;
+}
+
+function LegacyPracticePage() {
   const { refresh } = useLearner();
   const params = useParams();
   const router = useRouter();

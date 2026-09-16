@@ -11,6 +11,7 @@
  */
 
 import type {
+  ActivityState, ActivityAnswer, ActivityProgress,
   TokenResponse,
   UserOut,
   SubjectOut,
@@ -106,6 +107,10 @@ export const subjectsApi = {
 // ── Lessons ───────────────────────────────────────────────────────────────────
 
 export const lessonsApi = {
+  restartActivity: (id: number) => apiFetch<ActivityState>(`/lessons/${id}/activity/restart`, { method: "POST" }),
+  activity: (id: number, practice = false) => apiFetch<ActivityState>(`/lessons/${id}/activity?practice=${practice}`),
+  answerActivity: (id: number, body: ActivityAnswer) => apiFetch<ActivityState>(`/lessons/${id}/activity/answer`, { method: "POST", body: JSON.stringify(body) }),
+  saveActivity: (id: number, body: ActivityProgress) => apiFetch<ActivityState>(`/lessons/${id}/activity/progress`, { method: "PUT", body: JSON.stringify(body) }),
   get: (id: number) => apiFetch<LessonDetailOut>(`/lessons/${id}`),
 
   quiz: (id: number) => apiFetch<QuizOut>(`/lessons/${id}/quiz`),

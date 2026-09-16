@@ -27,7 +27,7 @@ export default function LessonsIndexPage() {
         <StatsStatus />
         <div className={styles.subjects}>
         {stats?.subjects.map((subject) => {
-          const progress = subject.total_lessons ? Math.round(subject.completed_lessons / subject.total_lessons * 100) : 0;
+          const progress = subject.total_lessons ? Math.round(subject.lessons.reduce((total, node) => total + (node.progress ?? (node.status === "completed" ? 1 : 0)), 0) / subject.total_lessons * 100) : 0;
           return (
           <Link key={subject.id} href={`/lessons/${subject.slug}`} className={`${styles.card} ${styles[subject.slug]}`} aria-label={`دروس ${subject.name_ar}`}>
             <CardDoodle className={styles.doodle} />

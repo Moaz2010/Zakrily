@@ -22,7 +22,7 @@ export function initialPath(slug: string): PathNodeOut[] {
     lesson_id: lesson.id,
     order: lesson.order,
     title: lesson.title,
-    status: lesson.order === 1 ? "unlocked" : "locked",
+    status: "unlocked",
     score: null,
   })) ?? [];
 }

@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60 * 24 * 7
 
     anthropic_api_key: str = ""
+    anthropic_model: str = "claude-sonnet-4-6"
 
     quiz_pass_threshold: float = 0.6
     min_attempts_for_skill_display: int = 3

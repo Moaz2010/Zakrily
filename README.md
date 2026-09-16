@@ -106,16 +106,50 @@ Home, lesson pages, and profile share the same statistics. They refresh after
 submissions, navigation, and window focus. Account names come from `/me`; unavailable
 data shows loading/error/retry states. The invented exam reminder has been removed.
 
-### 4. Content ingestion (offline, once real Unit 1 content is available)
+### 4. Science Unit 1 Lesson 1 RAG
 
 ```bash
 cd backend
-python -m scripts.ingest content/english/unit1/lesson1.md --subject-id 1 --lesson-id 1
-python -m scripts.generate_questions --lesson-id 1
-python -m scripts.validate_content --lesson-id 1
-# Then human-review surviving pending questions via the FE-09 review page
-# before they can be served (review_status must be 'approved').
+alembic upgrade head
+python -m scripts.ingest
+python -m scripts.import_science_questions
 ```
+
+This ingests only `content/science/unit 1/lesson_1.md`, resolving the lesson's
+actual database ID by Science and lesson order. It publishes the prepared sections
+in the existing reader and enables chat on Science → Unit 1 → Lesson 1. Reruns
+update source chunks in place. The separate question import publishes the 31 prepared
+Science Lesson 1 exercises into the existing question bank without changing RAG data
+or other lessons. It preserves question IDs and attempts on reruns. Question 14 is an
+unscored reflection because the supplied source does not give a supported answer.
+Short factual answers accept listed variants; longer explanations use choices based
+on the source answer, avoiding unreliable exact-sentence grading. Both defensible
+choices for source question 20 are accepted.
+
+The lesson Questions tab and its quiz/practice links use the same authenticated
+activity API. Each checked answer is saved immediately; returning resumes unanswered
+questions. Drafts and explored Learn stops are saved per learner. The activity shows
+latest-answer skill accuracy, flags small samples, and offers incorrect questions
+from the currently weakest skills. Corrected questions leave that practice queue.
+Historical attempts still feed the existing learner statistics. A completed question
+set with a passing score updates the existing lesson progress and unlocks the next
+lesson. The activity score can improve through targeted practice without restarting.
+
+Chunks retain `subject`, `unit`, `lesson`, `content_type`, section, and question
+number metadata. Explanations and exercises are separate; each exercise retains
+its options, answer, and model answer. Worked problems are exercises. Retrieval
+filters the lesson and content type before ranking; explicit question numbers
+select that question only. The existing 1536-dimensional vector column stores
+deterministic local lexical embeddings (word matching with lesson vocabulary
+aliases for Arabic, not general semantic/multilingual embeddings). PostgreSQL
+uses pgvector cosine distance; SQLite uses the same vectors locally.
+
+Set `ANTHROPIC_API_KEY` in `backend/.env` for generated explanations;
+`ANTHROPIC_MODEL` defaults to `claude-sonnet-4-6`. Retrieved sources are included
+in the model's grounding prompt. Without a key or during provider failures, chat
+clearly labels and shows retrieved excerpts instead. Empty retrieval returns a
+helpful message without generating unsupported answers. Chat uses the existing
+session/message tables and checks session ownership.
 
 ## API contract
 

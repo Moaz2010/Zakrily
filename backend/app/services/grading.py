@@ -2,6 +2,7 @@
 from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 import unicodedata
+import re
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -11,9 +12,10 @@ from app.models.lesson import Lesson
 from app.models.question import Question, QuestionType, ReviewStatus, SkillTag
 from app.schemas.quiz import QuestionPublic, QuestionResult, SkillBreakdownItem
 from app.services.scoring import has_sufficient_data
+from app.services.answer_ideas import matches_ideas
 
 
-def approved_questions(db: Session, lesson_id: int | None = None, subject_id: int | None = None):
+def approved_questions(db: Session, lesson_id: int | None = None, subject_id: int | None = None, include_unscored: bool = False):
     query = db.query(Question, SkillTag).join(SkillTag, Question.skill_tag_id == SkillTag.id).join(
         Lesson, Question.lesson_id == Lesson.id,
     ).filter(Question.review_status == ReviewStatus.approved, Lesson.is_published.is_(True))
@@ -21,7 +23,8 @@ def approved_questions(db: Session, lesson_id: int | None = None, subject_id: in
         query = query.filter(Question.lesson_id == lesson_id)
     if subject_id is not None:
         query = query.filter(Lesson.subject_id == subject_id)
-    return query.order_by(Question.id).all()
+    return [(q, tag) for q, tag in query.order_by(Question.id).all()
+            if include_unscored or (q.grading_data or {}).get("scored", True)]
 
 
 def public_question(question, tag):
@@ -34,6 +37,13 @@ def answer_matches(question: Question, answer: str) -> bool:
         return " ".join(unicodedata.normalize("NFKC", value).casefold().split())
     if not answer.strip():
         return False
+    if question.qtype == QuestionType.short_answer:
+        data = question.grading_data or {}
+        candidates = [question.correct_answer, *data.get("accepted", [])]
+        return any(matches_ideas(answer, expected, data.get("idea_rubric")) for expected in candidates)
+    if (question.grading_data or {}).get("accepted"):
+        normalized = lambda value: " ".join(re.findall(r"\w+", normalize(value)))
+        return normalized(answer) in {normalized(value) for value in question.grading_data["accepted"]}
     if question.qtype == QuestionType.numeric:
         try:
             actual, expected = Decimal(answer.strip()), Decimal(question.correct_answer.strip())

@@ -4,6 +4,7 @@ backend/__pycache__/
 **/__pycache__/
 *.pyc
 backend/.pytest_cache/
+backend/pytest-cache-files-*/
 backend/openapi.json
 backend/*.db
 

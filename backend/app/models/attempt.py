@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, JSON, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -49,3 +49,4 @@ class LessonProgress(Base):
     status: Mapped[LessonStatus] = mapped_column(Enum(LessonStatus), default=LessonStatus.locked)
     score: Mapped[float | None] = mapped_column(nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    learning_state: Mapped[dict] = mapped_column(JSON, default=dict)

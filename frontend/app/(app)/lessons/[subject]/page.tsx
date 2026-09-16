@@ -59,7 +59,7 @@ export default function LearningPathPage() {
 
   const current = nodes.find((node) => node.status === "unlocked");
   const completed = nodes.filter((node) => node.status === "completed").length;
-  const progress = nodes.length ? Math.round(completed / nodes.length * 100) : 0;
+  const progress = nodes.length ? Math.round(nodes.reduce((total, node) => total + (node.progress ?? (node.status === "completed" ? 1 : 0)), 0) / nodes.length * 100) : 0;
   const height = Math.max(540, nodes.length * 180 + 80);
   const points = nodes.map((_, i) => ({ x: X[i % X.length], y: height - 100 - i * 180 }));
 

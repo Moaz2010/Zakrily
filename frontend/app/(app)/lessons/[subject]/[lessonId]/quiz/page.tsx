@@ -1,5 +1,6 @@
 "use client";
 
+import { ScienceActivityRoute } from "@/components/ScienceActivityRoute";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { lessonsApi, type QuestionOut, type QuizSubmitResponse } from "@/lib/api";
@@ -11,6 +12,11 @@ import { subjectTheme } from "@/lib/subject-theme";
 import styles from "@/components/StudySession.module.css";
 
 export default function QuizPage() {
+  const params = useParams();
+  return params.subject === "science" ? <ScienceActivityRoute lessonId={Number(params.lessonId)} practice={false} fallback={<LegacyQuizPage />} /> : <LegacyQuizPage />;
+}
+
+function LegacyQuizPage() {
   const { refresh } = useLearner();
   const params = useParams();
   const router = useRouter();
