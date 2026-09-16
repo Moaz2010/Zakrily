@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { lessonsApi, type QuestionOut, type QuizSubmitResponse } from "@/lib/api";
+import { percentage, useLearner } from "@/lib/learner-context";
 
 import { StudySessionHeader } from "@/components/StudySessionHeader";
 import { SessionEmpty } from "@/components/SessionEmpty";
@@ -10,6 +11,7 @@ import { subjectTheme } from "@/lib/subject-theme";
 import styles from "@/components/StudySession.module.css";
 
 export default function QuizPage() {
+  const { refresh } = useLearner();
   const params = useParams();
   const router = useRouter();
   const subject = params.subject as string;
@@ -59,10 +61,10 @@ export default function QuizPage() {
       const answersPayload = questions.map((q) => ({
         question_id: q.id,
         answer: selectedAnswers[q.id] ?? "",
-        given_answer: selectedAnswers[q.id] ?? "",
       }));
       const res = await lessonsApi.submitQuiz(lessonId, { answers: answersPayload });
       setResult(res);
+      void refresh();
     } catch {
       setError("حدث خطأ أثناء إرسال الإجابات. يرجى المحاولة مرة أخرى.");
     } finally {
@@ -100,7 +102,7 @@ export default function QuizPage() {
               <span className="text-5xl mb-2">🎉</span>
               <h2 className="text-2xl font-black text-[#292c32]">اكتمل الاختبار!</h2>
               <p className={styles.score}>
-                {Math.round(result.score > 1 ? result.score : result.score * 100)}%
+                {Math.round(result.score * 100)}%
               </p>
             </div>
 
@@ -115,7 +117,7 @@ export default function QuizPage() {
                       className={styles.skillRow}
                     >
                       <span className="text-[#737c77]">
-                        {item.correct}/{item.total} ({Math.round(item.accuracy * 100)}%)
+                        {item.correct}/{item.total} ({percentage(item.accuracy)})
                       </span>
                       <span className="text-[#292c32] font-medium">{item.skill_tag}</span>
                     </div>

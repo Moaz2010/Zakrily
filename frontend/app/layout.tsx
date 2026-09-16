@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_Arabic } from "next/font/google";
 import "./globals.css";
-import { MSWProvider } from "@/components/MSWProvider";
 
 // Arabic-first font — Noto Sans Arabic covers the full Arabic Unicode block.
 const notoSansArabic = Noto_Sans_Arabic({
@@ -29,8 +28,7 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className={notoSansArabic.variable}>
       <body className="min-h-screen bg-gray-50 font-[family-name:var(--font-arabic)] antialiased">
-        {/* Explicit preview mode can run without a backend. */}
-        <MSWProvider>{children}</MSWProvider>
+        {children}
       </body>
     </html>
   );

@@ -1,0 +1,66 @@
+"""Grade approved questions on the server and save the evidence for statistics."""
+from collections import defaultdict
+from decimal import Decimal, InvalidOperation
+import unicodedata
+
+from fastapi import HTTPException
+from sqlalchemy.orm import Session
+
+from app.models.attempt import Attempt, AttemptContext
+from app.models.lesson import Lesson
+from app.models.question import Question, QuestionType, ReviewStatus, SkillTag
+from app.schemas.quiz import QuestionPublic, QuestionResult, SkillBreakdownItem
+from app.services.scoring import has_sufficient_data
+
+
+def approved_questions(db: Session, lesson_id: int | None = None, subject_id: int | None = None):
+    query = db.query(Question, SkillTag).join(SkillTag, Question.skill_tag_id == SkillTag.id).join(
+        Lesson, Question.lesson_id == Lesson.id,
+    ).filter(Question.review_status == ReviewStatus.approved, Lesson.is_published.is_(True))
+    if lesson_id is not None:
+        query = query.filter(Question.lesson_id == lesson_id)
+    if subject_id is not None:
+        query = query.filter(Lesson.subject_id == subject_id)
+    return query.order_by(Question.id).all()
+
+
+def public_question(question, tag):
+    return QuestionPublic(id=question.id, lesson_id=question.lesson_id, skill_tag=tag.slug.value,
+                          qtype=question.qtype.value, body=question.body, options=question.options)
+
+
+def answer_matches(question: Question, answer: str) -> bool:
+    def normalize(value):
+        return " ".join(unicodedata.normalize("NFKC", value).casefold().split())
+    if not answer.strip():
+        return False
+    if question.qtype == QuestionType.numeric:
+        try:
+            actual, expected = Decimal(answer.strip()), Decimal(question.correct_answer.strip())
+            return actual.is_finite() and expected.is_finite() and actual == expected
+        except InvalidOperation:
+            return False
+    return normalize(answer) == normalize(question.correct_answer)
+
+
+def save_answers(db: Session, user_id: int, answers, questions, context: AttemptContext):
+    by_id = {q.id: (q, tag) for q, tag in questions}
+    ids = [a.question_id for a in answers]
+    if not ids or len(ids) != len(set(ids)) or any(qid not in by_id for qid in ids):
+        raise HTTPException(422, "Submit unique, approved questions from this activity")
+    results = []
+    totals = defaultdict(lambda: [0, 0])
+    for answer in answers:
+        question, tag = by_id[answer.question_id]
+        correct = answer_matches(question, answer.answer)
+        db.add(Attempt(user_id=user_id, question_id=question.id, given_answer=answer.answer,
+                       is_correct=correct, context=context))
+        totals[tag.slug.value][0] += int(correct)
+        totals[tag.slug.value][1] += 1
+        results.append(QuestionResult(question_id=question.id, given_answer=answer.answer,
+                                      is_correct=correct, correct_answer=question.correct_answer,
+                                      explanation=question.explanation, skill_tag=tag.slug.value))
+    breakdown = [SkillBreakdownItem(skill_tag=tag, correct=correct, total=total,
+                                   accuracy=correct / total, insufficient_data=not has_sufficient_data(total))
+                 for tag, (correct, total) in totals.items()]
+    return results, breakdown

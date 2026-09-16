@@ -53,15 +53,21 @@ Run tests: `pytest`
 ```bash
 cd frontend
 npm install
-cp .env.local.example .env.local   # or keep NEXT_PUBLIC_USE_MOCKS=true to run against MSW mocks
+cp .env.local.example .env.local
 npm run dev
 ```
 
-With `NEXT_PUBLIC_USE_MOCKS=true`, the frontend runs entirely against MSW mocks
-(`frontend/mocks/handlers.ts`) with zero backend dependency, including production
-preview builds. Local development defaults to mocks; production requires this
-flag explicitly. `npm install` generates the worker in `public/`. Set the flag to
-`false` (and `NEXT_PUBLIC_API_BASE_URL` to the real backend URL) to hit the live API.
+The application calls the live backend and requires sign-in. Set
+`NEXT_PUBLIC_API_URL` to the backend URL. Mock handlers are retained as development
+fixtures but are no longer mounted by the application shell.
+
+For local development without Supabase, set `DATABASE_URL=sqlite:///./zakrely.db`
+in `backend/.env`, then run `alembic upgrade head` and `python -m scripts.seed`
+from `backend/`. This creates a persistent local database, not mock data. Vector
+search and Supabase Storage still require their production services. For a fresh
+Supabase database, the initial Alembic migration creates the schema and vector
+extension. Do not apply this baseline blindly to an existing manually created
+schema; compare it with the migration before marking it as applied.
 
 Deploy the frontend to Vercel by importing the repo and setting the root directory to
 `frontend/`.
@@ -76,9 +82,29 @@ Backend deployments must include this file at its repository-relative location.
 The seed can be rerun: it matches lessons by subject and order, updates names, and
 preserves existing objectives, sections, and publication status. New lessons start
 unpublished because only names have been supplied. The lesson page displays a
-content-coming-soon message until sections are available. The current catalog API
-uses initial path status (first lesson unlocked); saved learner progress remains a
-separate backend task. Existing quiz and practice endpoints still use prototype fixtures.
+content-coming-soon message until sections are available. Catalog routes use actual
+database IDs. Quiz and practice endpoints serve only approved questions belonging
+to published lessons; empty question banks stay empty.
+
+### Saved learner statistics
+
+`GET /me/stats?timezone=Africa/Cairo` returns the authenticated student's streak,
+seven-day activity, overall and subject accuracy, and lesson progress. The browser
+sends its IANA timezone. Activity counts submitted quiz/practice answers by day and
+subject. A streak includes consecutive active days ending today or yesterday and
+resets after a missed full day. Opening a page or starting the timer does not count.
+
+Accuracy is correct answers divided by all saved answers, including retakes;
+unattempted subjects have `null` accuracy and display an em dash. Lesson scores
+store the best quiz result on a 0–1 scale. Passing the configured threshold
+(`QUIZ_PASS_THRESHOLD`, default 0.6) completes a lesson and unlocks the next one;
+practice contributes to accuracy without unlocking lessons. Submissions are graded
+server-side and saved transactionally. Text answers use normalized exact matching;
+numeric answers use decimal comparison. No sample quiz results are saved.
+
+Home, lesson pages, and profile share the same statistics. They refresh after
+submissions, navigation, and window focus. Account names come from `/me`; unavailable
+data shows loading/error/retry states. The invented exam reminder has been removed.
 
 ### 4. Content ingestion (offline, once real Unit 1 content is available)
 
@@ -93,16 +119,15 @@ python -m scripts.validate_content --lesson-id 1
 
 ## API contract
 
-The backend exports its OpenAPI schema (`backend/openapi.json`, gitignored — regenerate
-with `python -c "import json; from app.main import app; json.dump(app.openapi(), open('openapi.json','w'))"`)
-which the frontend's typed client (`frontend/src/lib/api/schema.d.ts`) is generated from via
-`openapi-typescript`. The schema in `backend/app/schemas/` is the single source of truth —
-changes there require re-running codegen on the frontend.
+The schemas in `backend/app/schemas/` are the source of truth. Run
+`python -m scripts.export_api_types` from `backend/` after changing them. This
+generates `frontend/lib/api/schema.ts` from FastAPI OpenAPI without a database
+connection. `frontend/lib/api/types.ts` preserves the public names used by the UI.
 
 ## Status
 
-Phase 0 (contracts + scaffold) complete: schemas, stub routes with fixtures, DB models +
-Alembic migration setup, Next.js app with typed client + MSW mocks, offline CLI script
-skeletons for ingestion/generation/validation. See the task board in
-`zakrely-system-design.md` §7 for what's next (Phase 1: real DB-backed auth, quiz grading,
-skill scoring, practice selection).
+Auth, catalog, quiz/practice grading, skill accuracy, and learner statistics use the
+database. Tests cover account isolation, grading, best scores, unlocking, empty data,
+invalid submissions, timezone streak boundaries, and registration/login. AI chat,
+math-photo checking, and content ingestion/generation still include prototype work;
+they do not contribute to the learner statistics described above.

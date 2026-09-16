@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { getSubject } from "@/lib/curriculum";
 import styles from "./StudySession.module.css";
+import { useLearner } from "@/lib/learner-context";
 
 export function StudySessionHeader({ subject, lessonId, practice = false }: { subject: string; lessonId: number; practice?: boolean }) {
   const curriculum = getSubject(subject);
-  const lesson = curriculum?.lessons.find((item) => item.id === lessonId);
+  const { stats } = useLearner();
+  const lesson = stats?.subjects.find((item) => item.slug === subject)?.lessons.find((item) => item.lesson_id === lessonId);
   return <>
     <header className={styles.header}>
       <div className={styles.petals} aria-hidden="true"><img src="/petals-cross.png" alt="" /><img src="/petals-diagonal.png" alt="" /></div>

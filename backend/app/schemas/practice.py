@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from app.schemas.quiz import QuestionPublic, QuestionResult, SkillBreakdownItem
+from app.schemas.quiz import AnswerSubmission, QuestionPublic, QuestionResult, SkillBreakdownItem
 
 
 class PracticeSetOut(BaseModel):
@@ -8,7 +8,7 @@ class PracticeSetOut(BaseModel):
 
 
 class PracticeSubmitRequest(BaseModel):
-    answers: list[dict]
+    answers: list[AnswerSubmission]
 
 
 class PracticeSubmitResponse(BaseModel):

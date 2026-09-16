@@ -30,6 +30,7 @@ import type {
   MathSubmitResponse,
   RegisterRequest,
   LoginRequest,
+  LearnerStats,
 } from "./types";
 
 const BASE_URL =
@@ -54,9 +55,13 @@ async function apiFetch<T>(
     ...(init.headers as Record<string, string> | undefined),
   };
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+  const res = await fetch(`${BASE_URL}${path}`, { cache: "no-store", ...init, headers });
 
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined" && token) {
+      localStorage.removeItem("zakrely_token");
+      window.dispatchEvent(new Event("zakrely:unauthorized"));
+    }
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw Object.assign(new Error(res.statusText), { status: res.status, body: err });
   }
@@ -66,6 +71,10 @@ async function apiFetch<T>(
 
   return res.json() as Promise<T>;
 }
+
+export const progressApi = {
+  stats: () => apiFetch<LearnerStats>(`/me/stats?timezone=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`),
+};
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -120,10 +129,11 @@ export const skillsApi = {
 // ── Practice ──────────────────────────────────────────────────────────────────
 
 export const practiceApi = {
-  next: (subject?: string, n?: number) => {
+  next: (subject?: string, n?: number, lessonId?: number) => {
     const params = new URLSearchParams();
     if (subject) params.set("subject", subject);
     if (n !== undefined) params.set("n", String(n));
+    if (lessonId !== undefined) params.set("lesson_id", String(lessonId));
     const qs = params.toString();
     return apiFetch<PracticeNextResponse>(`/practice/next${qs ? `?${qs}` : ""}`);
   },

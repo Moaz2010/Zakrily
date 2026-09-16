@@ -3,7 +3,7 @@
 .activity h2 { font-size: 23px; line-height: 1.5; font-weight: 850; margin-bottom: 12px; }
 .chart { display: flex; gap: 10px; direction: ltr; }
 .column { min-width: 0; flex: 1; text-align: center; }
-.track { height: clamp(154px, 44vw, 188px); display: flex; flex-direction: column-reverse; gap: 3px; background: #eeefec; border-radius: 6px; padding: 2px; }
+.track { height: clamp(154px, 44vw, 188px); display: flex; flex-direction: column-reverse; background: #eeefec; border-radius: 6px; padding: 2px; overflow: hidden; }
 .segment { height: calc((100% - 9px) / 4); border-radius: 5px; flex-shrink: 0; }
 .day { display: block; font-size: 12px; margin-top: 9px; color: #151515; }
 .reminder { position: relative; min-height: 112px; border-radius: 16px; margin-top: 1px; background: #292c32; display: flex; align-items: center; justify-content: flex-end; padding: 12px; color: #cdcdcf; }

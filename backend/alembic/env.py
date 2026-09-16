@@ -2,6 +2,7 @@ from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+from pgvector.sqlalchemy import Vector
 
 from app.core.config import settings
 from app.core.database import Base
@@ -14,6 +15,14 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
+
+
+def compare_types(context, inspected_column, metadata_column, inspected_type, metadata_type):
+    # SQLite reflects VECTOR(n) as NUMERIC(n); this is the same declared column.
+    if (context.dialect.name == "sqlite" and isinstance(metadata_type, Vector)
+            and getattr(inspected_type, "precision", None) == metadata_type.dim):
+        return False
+    return None
 
 
 def run_migrations_offline() -> None:
@@ -35,7 +44,7 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(connection=connection, target_metadata=target_metadata, compare_type=compare_types)
         with context.begin_transaction():
             context.run_migrations()
 

@@ -5,6 +5,7 @@ backend/__pycache__/
 *.pyc
 backend/.pytest_cache/
 backend/openapi.json
+backend/*.db
 
 # Env files
 .env

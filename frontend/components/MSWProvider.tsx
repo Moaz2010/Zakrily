@@ -2,13 +2,12 @@
 
 /**
  * Explicit preview mode works in local and deployed builds.
- * Development defaults to preview; production requires USE_MOCKS=true.
+ * The live backend is the default. Preview requires USE_MOCKS=true.
  */
 
 import { useEffect, useState } from "react";
 
-const useMocks = process.env.NEXT_PUBLIC_USE_MOCKS === "true" ||
-  (process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_USE_MOCKS !== "false");
+const useMocks = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
 export function MSWProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(!useMocks);

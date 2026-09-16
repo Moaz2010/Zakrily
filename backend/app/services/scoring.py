@@ -1,7 +1,6 @@
 """Server-side grading, skill_scores aggregation, and lesson unlock logic (§6).
 
-Not yet wired into routers (those still return fixtures per BE-01). Implement
-against real DB models in Phase 1 (BE-05/BE-06).
+Shared thresholds used by persisted quiz grading and learner statistics.
 """
 
 from app.core.config import settings

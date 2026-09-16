@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { lessonsApi, type LessonSectionOut } from "@/lib/api";
+import { CardDoodle } from "./CardDoodle";
 import styles from "./TrainingActivities.module.css";
 
 function Arrow() {
@@ -10,7 +11,7 @@ function Arrow() {
 }
 
 function Pattern() {
-  return <svg className={styles.pattern} viewBox="0 0 220 220" fill="none" stroke="currentColor" strokeWidth="18" aria-hidden="true"><path d="M-30 205C100 245 64 80 156 45S258 150 191 142 64 67 94 14 180-6 166 46 17 46 30 126 112 183 104 134 19 92-20 143" /></svg>;
+  return <CardDoodle className={styles.pattern} />;
 }
 
 export function TrainingActivities({ subject, lessonId }: { subject: string; lessonId: number }) {

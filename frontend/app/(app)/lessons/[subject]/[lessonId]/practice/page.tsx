@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { practiceApi, type QuestionOut, type PracticeSubmitResponse } from "@/lib/api";
+import { percentage, useLearner } from "@/lib/learner-context";
 
 const SUBJECT_LABELS: Record<string, { ar: string; bg: string }> = {
   english: { ar: "إنجليزي", bg: "#2A4A6B" },
@@ -11,9 +12,11 @@ const SUBJECT_LABELS: Record<string, { ar: string; bg: string }> = {
 };
 
 export default function PracticePage() {
+  const { refresh } = useLearner();
   const params = useParams();
   const router = useRouter();
   const subject = params.subject as string;
+  const lessonId = Number(params.lessonId);
   const config = SUBJECT_LABELS[subject] ?? { ar: subject, bg: "#1E5C4A" };
 
   const [questions, setQuestions] = useState<QuestionOut[]>([]);
@@ -28,7 +31,7 @@ export default function PracticePage() {
   useEffect(() => {
     let active = true;
     practiceApi
-      .next(subject, 5)
+      .next(subject, 5, lessonId)
       .then((data) => {
         if (active) {
           setQuestions(data.questions);
@@ -44,7 +47,7 @@ export default function PracticePage() {
     return () => {
       active = false;
     };
-  }, [subject]);
+  }, [subject, lessonId]);
 
   const currentQ = questions[currentIndex];
   const isLast = currentIndex === questions.length - 1;
@@ -60,10 +63,10 @@ export default function PracticePage() {
       const answersPayload = questions.map((q) => ({
         question_id: q.id,
         answer: selectedAnswers[q.id] ?? "",
-        given_answer: selectedAnswers[q.id] ?? "",
       }));
       const res = await practiceApi.submit({ answers: answersPayload });
       setResult(res);
+      void refresh();
     } catch {
       setError("حدث خطأ أثناء إرسال التدريب. يرجى المحاولة مرة أخرى.");
     } finally {
@@ -91,6 +94,7 @@ export default function PracticePage() {
       </div>
 
       <div className="flex-1 px-4 py-6 flex flex-col max-w-lg mx-auto w-full">
+        {!loading && !error && !questions.length && <p role="status" className="text-center">لا توجد أسئلة تدريب متاحة لهذا الدرس بعد.</p>}
         {loading && (
           <div className="flex items-center justify-center flex-1">
             <p className="text-white/60 text-sm">جاري تجهيز التدريب الذكي...</p>
@@ -129,7 +133,7 @@ export default function PracticePage() {
                       className="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2 text-xs"
                     >
                       <span className="text-white/60">
-                        {item.correct}/{item.total} ({Math.round(item.accuracy * 100)}%)
+                        {item.correct}/{item.total} ({percentage(item.accuracy)})
                       </span>
                       <span className="text-white font-medium">{item.skill_tag}</span>
                     </div>

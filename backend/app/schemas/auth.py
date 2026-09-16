@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.schemas.common import UserRoleEnum
 
@@ -13,10 +13,17 @@ class UserOut(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=120)
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)
     role: UserRoleEnum = UserRoleEnum.student
+
+    @field_validator("password")
+    @classmethod
+    def bcrypt_length(cls, value):
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 UTF-8 bytes")
+        return value
 
 
 class LoginRequest(BaseModel):

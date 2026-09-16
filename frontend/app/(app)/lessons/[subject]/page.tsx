@@ -6,6 +6,7 @@ import Link from "next/link";
 import { subjectsApi, type PathNodeOut } from "@/lib/api";
 import { getSubject } from "@/lib/curriculum";
 import { TrainingActivities } from "@/components/TrainingActivities";
+import { percentage, useLearner } from "@/lib/learner-context";
 import styles from "./path.module.css";
 
 const COLORS: Record<string, string> = { science: "#527f76", math: "#996963", english: "#597b96" };
@@ -35,6 +36,8 @@ function Leaves({ className }: { className: string }) {
 export default function LearningPathPage() {
   const { subject: slug } = useParams<{ subject: string }>();
   const subject = getSubject(slug);
+  const { stats } = useLearner();
+  const subjectStats = stats?.subjects.find((item) => item.slug === slug);
   const [nodes, setNodes] = useState<PathNodeOut[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -82,7 +85,7 @@ export default function LearningPathPage() {
           </Link>
         </div>
         <div className={styles.summary}>
-          <div className={styles.count}><span aria-hidden="true">📖</span><div><strong>{subject.unit_ar}</strong><small>{subject.lessons.length} دروس</small></div></div>
+          <div className={styles.count}><span aria-hidden="true">📖</span><div><strong>{subject.unit_ar}</strong><small>{loading || error ? "—" : nodes.length} دروس</small><small>متوسط الدقة: {percentage(subjectStats?.accuracy)}</small></div></div>
           <div className={styles.progressWrap}>
             <span>{loading || error ? "—" : `${progress}٪`}</span>
             <div className={styles.progress} role="progressbar" aria-label="تقدم المادة" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><div style={{ width: `${progress}%` }} /></div>
@@ -125,7 +128,7 @@ export default function LearningPathPage() {
                 const info = subject.lessons.find((lesson) => lesson.order === node.order);
                 const status = locked ? "أكمل الدرس السابق لفتحه" : isCurrent ? "ابدأ هنا" : "مكتمل";
                 const href = `/lessons/${slug}/${node.lesson_id}`;
-                const content = <><span className={`${styles.node} ${styles[kind]}`}><LessonIcon kind={kind} /></span><span className={styles.label}><span className={styles.lessonNumber}>الدرس {node.order} {node.status === "completed" && "✓"}</span><strong dir="ltr" lang="en">{node.title}</strong>{info?.concept && <small dir="ltr" lang="en">{info.concept}</small>}<span className={styles.status}>{status}</span></span></>;
+                const content = <><span className={`${styles.node} ${styles[kind]}`}><LessonIcon kind={kind} /></span><span className={styles.label}><span className={styles.lessonNumber}>الدرس {node.order} {node.status === "completed" && "✓"}</span><strong dir="ltr" lang="en">{node.title}</strong>{info?.concept && <small dir="ltr" lang="en">{info.concept}</small>}<span className={styles.status}>{status}</span><small>أفضل نتيجة: {percentage(node.score)}</small></span></>;
                 return <li key={node.lesson_id} className={`${styles.lesson} ${point.x > 180 ? styles.onRight : styles.onLeft}`} style={{ top: point.y, "--node-x": `${point.x / 360 * 100}%` } as CSSProperties}>
                   {locked ? <div className={styles.lessonContent} aria-disabled="true">{content}</div> : <Link href={href} className={styles.lessonContent} aria-current={isCurrent ? "step" : undefined} aria-label={`الدرس ${node.order}: ${node.title} — ${mode === "lesson" ? "شرح" : "تدريبات"}`}>{content}</Link>}
                 </li>;
