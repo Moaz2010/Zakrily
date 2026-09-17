@@ -86,13 +86,29 @@ function SignIn({ onSuccess }: { onSuccess: (user: UserOut) => void }) {
       localStorage.setItem("zakrely_token", result.token);
       onSuccess(result.user);
     } catch (err) {
-      const status = (err as { status?: number }).status;
-      setMessage(status === 401 ? "البريد أو كلمة المرور غير صحيحة." : status === 400 ? "هذا البريد مستخدم بالفعل." : "تعذر تسجيل الدخول. تحقق من البيانات والاتصال بالخادم.");
+      const { status, body } = err as { status?: number; body?: { detail?: unknown } };
+      // 422 is a field-level validation error. Surfacing the reason matters most
+      // on sign-up, where the generic message hid why the account was rejected.
+      const detail = body?.detail;
+      const validation = Array.isArray(detail)
+        ? (detail[0] as { msg?: string } | undefined)?.msg
+        : typeof detail === "string" ? detail : undefined;
+      setMessage(
+        status === 401 ? "البريد أو كلمة المرور غير صحيحة."
+        : status === 400 ? "هذا البريد مستخدم بالفعل. جرّب تسجيل الدخول بدل إنشاء حساب."
+        : status === 422 ? (validation?.includes("at least 8")
+            ? "كلمة المرور لازم تكون ٨ أحرف على الأقل."
+            : validation?.includes("email")
+              ? "اكتب بريد إلكتروني صحيح."
+              : "البيانات مش مظبوطة. راجع الحقول وجرّب تاني.")
+        : register ? "تعذر إنشاء الحساب. تحقق من البيانات والاتصال بالخادم."
+        : "تعذر تسجيل الدخول. تحقق من البيانات والاتصال بالخادم."
+      );
     } finally { setBusy(false); }
   }
   return <div className="phone-shell min-h-screen px-6 py-16" dir="rtl">
-    <h1 className="text-3xl font-bold mb-3">أهلاً بيك في ذاكرلي</h1>
-    <p className="mb-8">سجّل دخولك لحفظ تقدمك ونتائجك.</p>
+    <h1 className="text-3xl font-bold mb-3">أهلاً بيك في ذاكريلي</h1>
+    <p className="mb-8">{register ? "اعمل حساب جديد عشان نحفظ تقدمك ونتائجك." : "سجّل دخولك لحفظ تقدمك ونتائجك."}</p>
     <form onSubmit={submit} className="flex flex-col gap-4">
       {register && <label>الاسم<input name="name" required maxLength={120} autoComplete="name" className="block w-full rounded-xl border p-3 mt-1" /></label>}
       <label>البريد الإلكتروني<input name="email" type="email" required autoComplete="email" dir="ltr" className="block w-full rounded-xl border p-3 mt-1" /></label>

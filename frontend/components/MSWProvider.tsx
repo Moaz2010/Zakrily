@@ -28,7 +28,7 @@ export function MSWProvider({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return <div className="min-h-screen bg-[#F7F7F7] text-[#292C32] flex flex-col items-center justify-center gap-4 p-6 text-center" role={failed ? "alert" : "status"}>
-      <p>{failed ? "تعذر تحميل التطبيق. أعد المحاولة." : "جاري تحميل ذاكرلي…"}</p>
+      <p>{failed ? "تعذر تحميل التطبيق. أعد المحاولة." : "جاري تحميل ذاكريلي…"}</p>
       {failed && <button className="rounded-xl bg-[#527f76] text-white px-5 py-3" onClick={() => window.location.reload()}>إعادة المحاولة</button>}
     </div>;
   }
