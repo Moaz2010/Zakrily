@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -9,9 +9,9 @@ import { TrainingActivities } from "@/components/TrainingActivities";
 import { LessonChat } from "@/components/LessonChat";
 import { ScienceLearn } from "@/components/ScienceLearn";
 import { EnglishLearn } from "@/components/EnglishLearn";
+import { MathLearn } from "@/components/MathLearn";
 import { GenericLearn } from "@/components/GenericLearn";
-import { percentage } from "@/lib/learner-context";
-import styles from "../path.module.css";
+import styles from "./lesson.module.css";
 
 const COLORS: Record<string, string> = { science: "#527f76", math: "#996963", english: "#597b96" };
 const LABELS: Record<string, string> = { science: "علوم", math: "رياضيات", english: "إنجليزي" };
@@ -42,36 +42,55 @@ export default function LessonDetailPage() {
 
   if (!curriculum || failed) return <div className="p-6" role="alert"><h1>تعذر تحميل الدرس</h1><Link href="/lessons" className="underline">العودة للمواد</Link></div>;
   if (!detail || !lesson) return <p className="p-6" role="status">جاري تحميل الدرس…</p>;
-  const progress = nodes.length ? Math.round(nodes.reduce((total, node) => total + (node.progress ?? (node.status === "completed" ? 1 : 0)), 0) / nodes.length * 100) : 0;
 
-  return <div className={styles.page} style={{ "--subject-color": COLORS[subject] } as CSSProperties}>
-    <header className={styles.header}>
-      <div className={styles.headerPetals} aria-hidden="true"><img src="/petals-cross.png" alt="" /><img src="/petals-diagonal.png" alt="" /></div>
-      <div className={styles.headingRow}><h1>{LABELS[subject]}</h1><Link href={`/lessons/${subject}`} className={styles.back} aria-label="العودة لمسار التعلم"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="m15 4-8 8 8 8" /></svg></Link></div>
-      <div className={styles.summary}><div className={styles.count}><span aria-hidden="true">📖</span><div><strong>{curriculum.unit_ar}</strong><small>{nodes.length} دروس</small><small>أفضل نتيجة: {percentage(lesson.score)}</small></div></div><div className={styles.progressWrap}><span>{nodes.length ? `${progress}٪` : "—"}</span><div className={styles.progress} role="progressbar" aria-label="تقدم المادة" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><div style={{ width: `${progress}%` }} /></div></div></div>
-    </header>
-    <section className={styles.unit}>
-      <div className={styles.unitRow}><div><h2>{curriculum.unit_ar}</h2><p>الدرس {lesson.order}</p></div><div className={styles.tabs} role="group" aria-label="نوع النشاط"><button onClick={() => setMode("lesson")} aria-pressed={mode === "lesson"}>📖 شرح</button><button onClick={() => setMode("practice")} aria-pressed={mode === "practice"}>✎ تدريبات</button></div></div>
-      <p className={styles.unitTitle} dir="ltr" lang="en">{detail?.lesson.title ?? lesson.title}</p>
-    </section>
-    {lesson.status === "locked" ? (
-      <p className="p-6">أكمل الدرس السابق لفتح هذا الدرس.</p>
-    ) : mode === "practice" ? (
-      <TrainingActivities subject={subject} lessonId={lesson.lesson_id} lessonActivity={subject === "science" || (subject === "english" && lesson.order === 1)} />
-    ) : subject === "science" && detail.sections.length > 0 ? (
-      <ScienceLearn key={`learn-${lesson.lesson_id}`} sections={detail.sections} lessonId={lesson.lesson_id} onProgress={() => { subjectsApi.path(subject).then(setNodes).catch(() => {}); }} onCompletePractice={() => setMode("practice")} />
-    ) : subject === "english" && lesson.order === 1 ? (
-      <EnglishLearn key={`learn-${lesson.lesson_id}`} lessonId={lesson.lesson_id} onProgress={() => { subjectsApi.path(subject).then(setNodes).catch(() => {}); }} onCompletePractice={() => setMode("practice")} />
-    ) : (
-      <GenericLearn key={`generic-${lesson.lesson_id}`} sections={detail.sections} onCompletePractice={() => setMode("practice")} />
-    )}
-    {lesson.status !== "locked" && (
-      <LessonChat
-        key={`chat-${lesson.lesson_id}`}
-        lessonId={lesson.lesson_id}
-        subject={subject}
-        lessonTitle={detail?.lesson.title ?? lesson.title}
-      />
-    )}
-  </div>;
+  return (
+    <div className={styles.page} style={{ "--subject-color": COLORS[subject] } as CSSProperties}>
+      {/* Compact top bar */}
+      <div className={styles.topBar}>
+        <div className={styles.topMeta}>
+          <span className={styles.topSubject}>{LABELS[subject]}</span>
+          <span className={styles.topLesson} dir="ltr" lang="en">{detail.lesson.title ?? lesson.title}</span>
+        </div>
+        {lesson.status !== "locked" && (
+          <div className={styles.tabs} role="group" aria-label="نوع النشاط">
+            <button onClick={() => setMode("lesson")} aria-pressed={mode === "lesson"}>📖 شرح</button>
+            <button onClick={() => setMode("practice")} aria-pressed={mode === "practice"}>✎ تدريبات</button>
+          </div>
+        )}
+        <Link href={`/lessons/${subject}`} className={styles.back} aria-label="العودة لمسار التعلم">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="m15 4-8 8 8 8" /></svg>
+        </Link>
+      </div>
+
+      {/* Main content */}
+      <div className={styles.content}>
+        {lesson.status === "locked" ? (
+          <div className={styles.locked}>
+            <p>أكمل الدرس السابق لفتح هذا الدرس.</p>
+            <Link href={`/lessons/${subject}`}>العودة لمسار التعلم</Link>
+          </div>
+        ) : mode === "practice" ? (
+          <TrainingActivities subject={subject} lessonId={lesson.lesson_id} lessonActivity={subject === "science" || (subject === "english" && lesson.order === 1)} />
+        ) : subject === "science" && detail.sections.length > 0 ? (
+          <ScienceLearn key={`learn-${lesson.lesson_id}`} sections={detail.sections} lessonId={lesson.lesson_id} onProgress={() => { subjectsApi.path(subject).then(setNodes).catch(() => {}); }} onCompletePractice={() => setMode("practice")} />
+        ) : subject === "english" && lesson.order === 1 ? (
+          <EnglishLearn key={`learn-${lesson.lesson_id}`} lessonId={lesson.lesson_id} onProgress={() => { subjectsApi.path(subject).then(setNodes).catch(() => {}); }} onCompletePractice={() => setMode("practice")} />
+        ) : subject === "math" && lesson.order === 1 ? (
+          <MathLearn key={`learn-${lesson.lesson_id}`} lessonId={lesson.lesson_id} onProgress={() => { subjectsApi.path(subject).then(setNodes).catch(() => {}); }} onCompletePractice={() => setMode("practice")} />
+        ) : (
+          <GenericLearn key={`generic-${lesson.lesson_id}`} sections={detail.sections} onCompletePractice={() => setMode("practice")} />
+        )}
+      </div>
+
+      {lesson.status !== "locked" && (
+        <LessonChat
+          key={`chat-${lesson.lesson_id}`}
+          lessonId={lesson.lesson_id}
+          subject={subject}
+          lessonTitle={detail.lesson.title ?? lesson.title}
+        />
+      )}
+    </div>
+  );
 }
+
