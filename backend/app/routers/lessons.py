@@ -1,8 +1,10 @@
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.models.attempt import LessonStatus
 from app.models.lesson import Lesson
 from app.models.subject import Subject, SubjectSlug
 from app.models.user import User
@@ -34,8 +36,7 @@ def restart_activity(lesson_id: int, current_user: User = Depends(get_current_us
 @router.put("/lessons/{lesson_id}/activity/progress", response_model=ActivityState)
 def save_activity_progress(lesson_id: int, payload: ActivityProgress, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     lesson, bank, progress = lesson_activity.load(db, current_user.id, lesson_id, lock=True)
-    # Lesson 2 has six existing cards and five source-based memory cards.
-    card_count = {1: 20, 2: 11}.get(lesson.order_index, payload.learning_total or 500)
+    card_count = payload.learning_total or {1: 20, 2: 11}.get(lesson.order_index, 500)
     if any(step not in range(card_count) for step in payload.learned_steps):
         raise HTTPException(422, "Unknown learning stop")
     progress = lesson_activity.ensure_progress(db, current_user.id, lesson_id, progress)
@@ -49,6 +50,9 @@ def save_activity_progress(lesson_id: int, payload: ActivityProgress, current_us
         if payload.draft.question_id not in latest:
             saved["drafts"] = {**saved.get("drafts", {}), str(payload.draft.question_id): payload.draft.answer}
     progress.learning_state = saved
+    if len(saved["learned_steps"]) >= card_count and not bank:
+        progress.status = LessonStatus.completed
+        progress.completed_at = progress.completed_at or datetime.now(timezone.utc)
     db.commit()
     return lesson_activity.state(db, current_user.id, lesson_id)
 

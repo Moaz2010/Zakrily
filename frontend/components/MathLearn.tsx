@@ -126,7 +126,7 @@ export function MathLearn({
     if (localLearned.length > 0) {
       setLearned(localLearned);
       const nextStep = localLearned.length;
-      setStep(nextStep >= TOTAL_CARDS ? TOTAL_CARDS - 1 : nextStep);
+      setStep(nextStep < TOTAL_CARDS ? nextStep : 0);
     }
     try {
       const saved = await lessonsApi.activity(lessonId);
@@ -140,7 +140,7 @@ export function MathLearn({
         }
         if (localLearned.length === 0) {
           const nextStep = merged.length;
-          setStep(nextStep >= TOTAL_CARDS ? TOTAL_CARDS - 1 : nextStep);
+          setStep(nextStep < TOTAL_CARDS ? nextStep : 0);
         }
       }
     } catch {}
@@ -439,10 +439,10 @@ export function MathLearn({
           <CardShell icon="⚠️" badge="أخطاء شائعة | MISTAKES" title="Watch out!" hint="3 لخبطات من الدرس">
             <div className={styles.stack}>
               {[
-                ["لا تقول إن 222 كل أرقامها نفس القيمة — المكان بيغيّر القيمة."],
-                ["Place value اسم المكان، Value الكمية."],
-                ["متنقراش الرقم رقم رقم. اقطعه فترات وسمّي كل فترة."],
-              ].map(([text]) => (
+                "لا تقول إن 222 كل أرقامها نفس القيمة — المكان بيغيّر القيمة.",
+                "Place value اسم المكان، Value الكمية.",
+                "متنقراش الرقم رقم رقم. اقطعه فترات وسمّي كل فترة.",
+              ].map((text) => (
                 <article key={text} className={styles.factRow} dir="rtl">
                   <span aria-hidden="true">💡</span>
                   <strong>{text}</strong>

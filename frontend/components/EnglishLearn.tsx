@@ -215,7 +215,7 @@ export function EnglishLearn({
     if (localLearned.length > 0) {
       setLearned(localLearned);
       const nextStep = localLearned.length;
-      setStep(nextStep >= TOTAL_CARDS ? TOTAL_CARDS - 1 : nextStep);
+      setStep(nextStep < TOTAL_CARDS ? nextStep : 0);
     }
     try {
       const saved = await lessonsApi.activity(lessonId);
@@ -229,7 +229,7 @@ export function EnglishLearn({
         }
         if (localLearned.length === 0) {
           const nextStep = merged.length;
-          setStep(nextStep >= TOTAL_CARDS ? TOTAL_CARDS - 1 : nextStep);
+          setStep(nextStep < TOTAL_CARDS ? nextStep : 0);
         }
       }
     } catch {}

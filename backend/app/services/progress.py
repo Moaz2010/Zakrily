@@ -34,7 +34,8 @@ def lesson_path(db: Session, user_id: int, subject_id: int) -> list[PathNode]:
     subject = db.get(Subject, subject_id)
     for lesson, progress in rows:
         completed = progress is not None and progress.status == LessonStatus.completed
-        status = "completed" if completed else "unlocked" if previous_completed else "locked"
+        is_ready = not (subject.slug.value == "math" and lesson.order_index >= 3)
+        status = "completed" if completed else "unlocked" if (previous_completed and is_ready) else "locked"
         saved = (progress.learning_state or {}) if progress else {}
         parts = []
         learning_total = saved.get("learning_total")

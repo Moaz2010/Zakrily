@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -10,6 +10,7 @@ import { LessonChat } from "@/components/LessonChat";
 import { ScienceLearn } from "@/components/ScienceLearn";
 import { EnglishLearn } from "@/components/EnglishLearn";
 import { MathLearn } from "@/components/MathLearn";
+import { MathLearn2 } from "@/components/MathLearn2";
 import { GenericLearn } from "@/components/GenericLearn";
 import styles from "./lesson.module.css";
 
@@ -77,6 +78,8 @@ export default function LessonDetailPage() {
           <EnglishLearn key={`learn-${lesson.lesson_id}`} lessonId={lesson.lesson_id} onProgress={() => { subjectsApi.path(subject).then(setNodes).catch(() => {}); }} onCompletePractice={() => setMode("practice")} />
         ) : subject === "math" && lesson.order === 1 ? (
           <MathLearn key={`learn-${lesson.lesson_id}`} lessonId={lesson.lesson_id} onProgress={() => { subjectsApi.path(subject).then(setNodes).catch(() => {}); }} onCompletePractice={() => setMode("practice")} />
+        ) : subject === "math" && lesson.order === 2 ? (
+          <MathLearn2 key={`learn2-${lesson.lesson_id}`} lessonId={lesson.lesson_id} onProgress={() => { subjectsApi.path(subject).then(setNodes).catch(() => {}); }} onCompletePractice={() => setMode("practice")} />
         ) : (
           <GenericLearn key={`generic-${lesson.lesson_id}`} sections={detail.sections} onCompletePractice={() => setMode("practice")} />
         )}

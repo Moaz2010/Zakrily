@@ -295,7 +295,7 @@ export function ScienceLearn({
     if (localLearned.length > 0) {
       setLearned(localLearned);
       const nextStep = localLearned.length;
-      setStep(nextStep >= TOTAL_CARDS ? TOTAL_CARDS - 1 : nextStep);
+      setStep(nextStep < TOTAL_CARDS ? nextStep : 0);
     }
 
     try {
@@ -310,7 +310,7 @@ export function ScienceLearn({
         }
         if (localLearned.length === 0) {
           const nextStep = merged.length;
-          setStep(nextStep >= TOTAL_CARDS ? TOTAL_CARDS - 1 : nextStep);
+          setStep(nextStep < TOTAL_CARDS ? nextStep : 0);
         }
       }
     } catch {

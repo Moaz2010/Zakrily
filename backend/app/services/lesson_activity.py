@@ -19,8 +19,8 @@ def load(db, user_id, lesson_id, lock=False):
         db.query(User).filter_by(id=user_id).with_for_update().one()
     lesson = accessible_lesson(db, user_id, lesson_id)
     subject = db.get(Subject, lesson.subject_id)
-    if subject.slug.value not in {"science", "english"}:
-        raise HTTPException(422, "This activity is available for Science and English lessons")
+    if subject.slug.value not in {"science", "english", "math"}:
+        raise HTTPException(422, "This activity is available for Science, English, and Math lessons")
     bank = [(q, tag) for q, tag in approved_questions(db, lesson_id=lesson_id, include_unscored=True)
             if (q.grading_data or {}).get("number") is not None]
     progress = db.get(LessonProgress, (user_id, lesson_id))
