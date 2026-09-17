@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { chatApi } from "@/lib/api";
+import type { ChatModelOption } from "@/lib/api";
 import styles from "./LessonChat.module.css";
 
 const COLORS: Record<string, string> = { science: "#346a5e", math: "#854f4a", english: "#426b8a" };
@@ -15,6 +16,8 @@ export function LessonChat({ lessonId, subject, lessonTitle }: {
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [models, setModels] = useState<ChatModelOption[]>([]);
+  const [model, setModel] = useState("");
   const session = useRef<number | null>(null);
   const sending = useRef(false);
   const input = useRef<HTMLInputElement>(null);
@@ -27,6 +30,14 @@ export function LessonChat({ lessonId, subject, lessonTitle }: {
     return () => { mounted.current = false; };
   }, []);
   useEffect(() => { if (open) input.current?.focus(); }, [open]);
+  useEffect(() => {
+    if (!open || models.length) return;
+    chatApi.providers().then((data) => {
+      if (!mounted.current) return;
+      setModels(data.models);
+      setModel((current) => current || data.default_model || data.models[0]?.id || "");
+    }).catch(() => { /* picker is optional; the server falls back on its own */ });
+  }, [open, models.length]);
   useEffect(() => {
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [open, messages, busy, error]);
@@ -47,7 +58,7 @@ export function LessonChat({ lessonId, subject, lessonTitle }: {
     try {
       const id = session.current ?? (await chatApi.createSession({ lesson_id: lessonId, mode: "lesson_explain" })).session_id;
       session.current = id;
-      const response = await chatApi.sendMessage(id, { content });
+      const response = await chatApi.sendMessage(id, { content, ...(model ? { model } : {}) });
       if (mounted.current) setMessages((previous) => [...previous, { role: "assistant", content: response.reply }]);
     } catch {
       if (mounted.current) {
@@ -76,6 +87,16 @@ export function LessonChat({ lessonId, subject, lessonTitle }: {
         <button type="button" className={styles.close} onClick={close} aria-label="إغلاق المحادثة">×</button>
       </header>
       <p className={styles.lesson}><span>بنتكلم عن</span><bdi>{lessonTitle}</bdi></p>
+      {models.length > 1 && <p className={styles.modelRow}>
+        <label htmlFor="lesson-chat-model">الموديل</label>
+        <select id="lesson-chat-model" value={model} disabled={busy} onChange={(event) => setModel(event.target.value)}>
+          {models.map((option) => <option key={option.id} value={option.id}>
+            {option.label}{option.cost === "high" ? " — أغلى 💰" : " — اقتصادي"}
+          </option>)}
+        </select>
+        {models.find((option) => option.id === model)?.cost === "high" &&
+          <span className={styles.costHint}>الموديل ده بيكلّف أكتر في الاستخدام</span>}
+      </p>}
       <div ref={log} className={styles.messages} role="log" aria-label="رسائل المحادثة" aria-live="polite" aria-relevant="additions" aria-busy={busy}>
         {messages.length === 0 && <div className={styles.welcome}>
           <span className={styles.sparkle} aria-hidden="true">✦</span>

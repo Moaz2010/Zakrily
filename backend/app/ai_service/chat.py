@@ -1,10 +1,10 @@
-"""Shared, lesson-scoped RAG tutor using Groq chat completions."""
+"""Shared, lesson-scoped RAG tutor over a selectable chat provider."""
 import logging
 import re
 
-import httpx
 from sqlalchemy.orm import Session
 
+from app.ai_service import providers
 from app.ai_service.retrieval import retrieve, requested_type
 from app.core.config import settings
 from app.core.database import SessionLocal
@@ -12,10 +12,11 @@ from app.models.lesson import Lesson
 from app.models.subject import Subject
 
 
-def explain(lesson_id: int, question: str, history: list[dict], *, db: Session | None = None) -> str:
+def explain(lesson_id: int, question: str, history: list[dict], *, db: Session | None = None,
+            provider: str | None = None, model: str | None = None) -> str:
     if db is None:
         with SessionLocal() as session:
-            return explain(lesson_id, question, history, db=session)
+            return explain(lesson_id, question, history, db=session, provider=provider, model=model)
     lesson = db.get(Lesson, lesson_id)
     if lesson is None:
         return "مش لاقية الدرس ده. ارجع لصفحة الدروس وجرب تاني."
@@ -36,7 +37,8 @@ def explain(lesson_id: int, question: str, history: list[dict], *, db: Session |
         for chunk in chunks
     )
     fallback = "الشرح الذكي مش متاح دلوقتي. دي مقتطفات من الدرس ممكن تساعدك:\n\n" + context
-    if not settings.groq_api_key:
+    chosen = providers.resolve(provider)
+    if chosen is None:
         return fallback
     system = (
         f"You are Nawwara, a friendly Grade 4 tutor for {subject.name_en}, Unit 1, "
@@ -53,23 +55,13 @@ def explain(lesson_id: int, question: str, history: list[dict], *, db: Session |
         "Use readable plain text and simple lists.\n\nRetrieved lesson sources:\n" + context
     )
     try:
-        with httpx.Client(timeout=45.0) as client:
-            response = client.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={"Authorization": f"Bearer {settings.groq_api_key}"},
-                json={
-                    "model": settings.groq_model,
-                    "max_completion_tokens": 2400,
-                    "reasoning_effort": "low",
-                    "messages": [{"role": "system", "content": system},
-                                 *history[-10:], {"role": "user", "content": question}],
-                },
-            )
-            response.raise_for_status()
-            reply = response.json()["choices"][0]["message"]["content"]
-            return reply.strip() if isinstance(reply, str) and reply.strip() else fallback
-    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
-        logging.getLogger(__name__).warning("Lesson explanation provider unavailable")
+        return providers.complete(
+            chosen, system,
+            [*history[-10:], {"role": "user", "content": question}],
+            max_tokens=2400, model=model,
+        )
+    except providers.ProviderError:
+        logging.getLogger(__name__).warning("Lesson explanation unavailable via %s", chosen)
         return fallback
 
 

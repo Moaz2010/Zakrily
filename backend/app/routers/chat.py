@@ -1,18 +1,38 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.ai_service import providers
 from app.ai_service.chat import converse, explain
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.chat import ChatMode, ChatSession, ChatMessage, ChatRole
 from app.models.user import User
 from app.schemas.chat import (
-    ChatMessageRequest, ChatMessageResponse,
+    ChatMessageRequest, ChatMessageResponse, ChatModelOption, ChatProvidersResponse,
     ChatSessionCreateRequest, ChatSessionCreateResponse,
 )
 from app.services.progress import accessible_lesson
 
 router = APIRouter(tags=["chat"])
+
+
+@router.get("/chat/providers", response_model=ChatProvidersResponse)
+def list_providers(current_user: User = Depends(get_current_user)):
+    available = providers.configured()
+    options = [
+        ChatModelOption(
+            id=entry["id"], provider=entry["provider"], label=entry["label"], cost=entry["cost"],
+            usd_per_mtok_input=entry["usd_per_mtok"][0], usd_per_mtok_output=entry["usd_per_mtok"][1],
+        )
+        for entry in providers.catalog(available)
+    ]
+    default_provider = available[0] if available else None
+    return ChatProvidersResponse(
+        available=available,
+        default=default_provider,
+        default_model=providers.model_for(default_provider) if default_provider else None,
+        models=options,
+    )
 
 
 
@@ -43,7 +63,22 @@ def send_message(session_id: int, payload: ChatMessageRequest, current_user: Use
     messages = (message_query.limit(10) if session.mode == ChatMode.science_explain else message_query).all()
     history = [{"role": m.role.value, "content": m.content} for m in reversed(messages)]
     if session.mode == ChatMode.science_explain:
-        result = ChatMessageResponse(reply=explain(session.lesson_id, content, history, db=db))
+        # An explicit model implies its provider, so the picker only has to send one field.
+        requested = payload.provider.value if payload.provider else None
+        if payload.model:
+            owner = providers.provider_of(payload.model)
+            if owner is None:
+                raise HTTPException(422, "Unknown model")
+            requested = owner
+        chosen = providers.resolve(requested)
+        if chosen is not None and payload.model and providers.provider_of(payload.model) != chosen:
+            raise HTTPException(503, "That model's provider is not configured on the server")
+        result = ChatMessageResponse(
+            reply=explain(session.lesson_id, content, history, db=db,
+                          provider=requested, model=payload.model),
+            provider=chosen,
+            model=payload.model or (providers.model_for(chosen) if chosen else None),
+        )
     else:
         response = converse(session.lesson_id, [*history, {"role": "user", "content": content}])
         result = ChatMessageResponse(**response)
