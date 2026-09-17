@@ -10,7 +10,7 @@ const notoSansArabic = Noto_Sans_Arabic({
 });
 
 export const metadata: Metadata = {
-  title: "ذاكرلي",
+  title: "ذاكريلي",
   description: "منصة تعلم تفاعلية — الصف الرابع الابتدائي",
 };
 
