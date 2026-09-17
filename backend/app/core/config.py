@@ -20,11 +20,20 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60 * 24 * 7
 
     anthropic_api_key: str = ""
-    anthropic_model: str = "claude-sonnet-4-6"
+    # Cheapest Claude tier; override in .env for higher-quality generation runs.
+    anthropic_model: str = "claude-haiku-4-5-20251001"
+
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
+    openai_whisper_model: str = "whisper-1"
 
     groq_api_key: str = ""
     groq_model: str = "openai/gpt-oss-120b"
     groq_whisper_model: str = "whisper-large-v3"
+
+    # Default provider for lesson chat: anthropic | openai | groq.
+    # Requests may override per call; falls back to whichever key is configured.
+    chat_provider: str = "anthropic"
 
     gemini_api_key: str = ""
     gemini_tts_model: str = "gemini-2.5-flash-preview-tts"

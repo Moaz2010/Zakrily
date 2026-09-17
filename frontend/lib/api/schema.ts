@@ -57,17 +57,43 @@ export type Body_submit_math_math_submit_post = {
   "question_id": number;
 };
 
+export type Body_turn_voice_sessions__session_id__turn_post = {
+  "audio": string;
+};
+
 export type ChatMessageRequest = {
   "content": string;
+  "provider"?: ChatProviderEnum | null;
+  "model"?: string | null;
 };
 
 export type ChatMessageResponse = {
   "reply": string;
   "done"?: boolean;
   "feedback"?: string | null;
+  "provider"?: string | null;
+  "model"?: string | null;
 };
 
 export type ChatModeEnum = "lesson_explain" | "english_convo" | "science_explain";
+
+export type ChatModelOption = {
+  "id": string;
+  "provider": ChatProviderEnum;
+  "label": string;
+  "cost": string;
+  "usd_per_mtok_input": number;
+  "usd_per_mtok_output": number;
+};
+
+export type ChatProviderEnum = "anthropic" | "openai" | "groq";
+
+export type ChatProvidersResponse = {
+  "available": Array<ChatProviderEnum>;
+  "default": ChatProviderEnum | null;
+  "default_model": string | null;
+  "models": Array<ChatModelOption>;
+};
 
 export type ChatSessionCreateRequest = {
   "lesson_id": number;
@@ -117,6 +143,11 @@ export type LessonStatusEnum = "locked" | "unlocked" | "completed";
 export type LoginRequest = {
   "email": string;
   "password": string;
+};
+
+export type MathCheckRequest = {
+  "question_id": number;
+  "answer": string;
 };
 
 export type MathSubmitResponse = {
@@ -247,6 +278,4 @@ export type ValidationError = {
   "loc": Array<string | number>;
   "msg": string;
   "type": string;
-  "input"?: unknown;
-  "ctx"?: Record<string, unknown>;
 };

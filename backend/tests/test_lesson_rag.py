@@ -54,30 +54,61 @@ def test_math_rules_and_english_summary_are_explanations(db, all_lessons):
 
 
 @pytest.mark.parametrize("slug", ["english", "math", "science"])
-def test_shared_endpoint_uses_groq_and_current_lesson(client, db, all_lessons, monkeypatch, slug):
+def test_shared_endpoint_grounds_in_the_current_lesson(client, db, all_lessons, monkeypatch, slug):
     user = User(name="Learner", email="rag@example.com", password_hash="unused")
     db.add(user)
     db.commit()
     client.headers["Authorization"] = f"Bearer {create_access_token(str(user.id))}"
     lesson = db.query(Lesson).join(Subject).filter(Subject.slug == slug, Lesson.order_index == 1).one()
-    monkeypatch.setattr(chat.settings, "groq_api_key", "test-key")
-    factory = MagicMock()
-    provider = factory.return_value.__enter__.return_value
-    provider.post.return_value.json.return_value = {"choices": [{"message": {"content": "تعالى نفهم الدرس سوا"}}]}
-    monkeypatch.setattr(chat.httpx, "Client", factory)
+    monkeypatch.setattr(chat.providers.settings, "groq_api_key", "test-key")
+    calls = []
+
+    def fake_complete(provider, system, messages, **kwargs):
+        calls.append({"provider": provider, "system": system, "messages": messages, **kwargs})
+        return "تعالى نفهم الدرس سوا"
+
+    monkeypatch.setattr(chat.providers, "complete", fake_complete)
     result = client.post("/chat/sessions", json={"lesson_id": lesson.id, "mode": "lesson_explain"})
     assert result.status_code == 200
     url = f"/chat/sessions/{result.json()['session_id']}/message"
     result = client.post(url, json={"content": "اشرحلي الدرس ببساطة"})
     assert result.status_code == 200 and result.json()["reply"] == "تعالى نفهم الدرس سوا"
-    payload = provider.post.call_args.kwargs["json"]
-    assert payload["model"] == "openai/gpt-oss-120b"
-    prompt = payload["messages"][0]["content"]
+    prompt = calls[-1]["system"]
     assert "Egyptian Arabic" in prompt and lesson.title in prompt
     assert f"Source: {slug}/unit 1/" in prompt
     assert all(f"Source: {other}/" not in prompt for other in {"math", "english", "science"} - {slug})
     client.post(url, json={"content": "مش فاهم"})
-    assert provider.post.call_count == 2
-    assert provider.post.call_args.kwargs["json"]["messages"][1]["content"] == "اشرحلي الدرس ببساطة"
+    assert len(calls) == 2
+    # The follow-up turn carries the previous question forward as history.
+    assert calls[-1]["messages"][0]["content"] == "اشرحلي الدرس ببساطة"
     locked = db.query(Lesson).filter_by(subject_id=lesson.subject_id, order_index=2).one()
     assert client.post("/chat/sessions", json={"lesson_id": locked.id, "mode": "lesson_explain"}).status_code == 403
+
+
+def test_message_can_select_a_model_and_reports_it(client, db, all_lessons, monkeypatch):
+    user = User(name="Picker", email="picker@example.com", password_hash="unused")
+    db.add(user)
+    db.commit()
+    client.headers["Authorization"] = f"Bearer {create_access_token(str(user.id))}"
+    lesson = db.query(Lesson).join(Subject).filter(Subject.slug == "science", Lesson.order_index == 1).one()
+    monkeypatch.setattr(chat.providers.settings, "openai_api_key", "test-key")
+    monkeypatch.setattr(chat.providers.settings, "anthropic_api_key", "")
+    monkeypatch.setattr(chat.providers.settings, "groq_api_key", "")
+    used = {}
+
+    def fake_complete(provider, system, messages, **kwargs):
+        used["provider"], used["model"] = provider, kwargs.get("model")
+        return "رد تجريبي"
+
+    monkeypatch.setattr(chat.providers, "complete", fake_complete)
+    session_id = client.post("/chat/sessions", json={"lesson_id": lesson.id, "mode": "lesson_explain"}).json()["session_id"]
+    url = f"/chat/sessions/{session_id}/message"
+
+    result = client.post(url, json={"content": "اشرحلي الدرس", "model": "gpt-4o-mini"})
+    assert result.status_code == 200
+    assert used == {"provider": "openai", "model": "gpt-4o-mini"}
+    assert result.json()["provider"] == "openai" and result.json()["model"] == "gpt-4o-mini"
+
+    # A model whose provider has no key configured is refused, not silently swapped.
+    assert client.post(url, json={"content": "تاني", "model": "claude-haiku-4-5-20251001"}).status_code == 503
+    assert client.post(url, json={"content": "تاني", "model": "not-a-model"}).status_code == 422

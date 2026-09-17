@@ -15,6 +15,10 @@
 .lesson { display: flex; gap: 8px; padding: 10px 16px; background: white; border-bottom: 1px solid #e6e9e2; font-size: 11px; margin: 0; }
 .lesson span { color: #707870; flex-shrink: 0; }
 .lesson bdi { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.modelRow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 16px; background: white; border-bottom: 1px solid #e6e9e2; font-size: 11px; margin: 0; }
+.modelRow label { color: #707870; flex-shrink: 0; }
+.modelRow select { border: 1px solid #dce4dd; border-radius: 10px; background: #f7f8f4; padding: 5px 8px; font-size: 11px; color: #292c32; font-family: inherit; }
+.costHint { color: #8a6d1f; }
 .messages { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 18px 14px; }
 .welcome { text-align: center; padding: 8px 8px 0; }
 .sparkle { color: var(--chat-color); font-size: 34px; }

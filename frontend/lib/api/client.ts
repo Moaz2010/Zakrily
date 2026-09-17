@@ -28,6 +28,7 @@ import type {
   SessionOut,
   ChatMessageRequest,
   ChatMessageResponse,
+  ChatProvidersResponse,
   MathSubmitResponse,
   RegisterRequest,
   LoginRequest,
@@ -153,6 +154,8 @@ export const practiceApi = {
 // ── Chat ──────────────────────────────────────────────────────────────────────
 
 export const chatApi = {
+  providers: () => apiFetch<ChatProvidersResponse>("/chat/providers"),
+
   createSession: (body: CreateSessionRequest) =>
     apiFetch<SessionOut>("/chat/sessions", {
       method: "POST",
