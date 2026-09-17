@@ -4,8 +4,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "Zakrely API"
+    app_name: str = "Zakrily API"
     environment: str = "development"
+
+    # Comma-separated browser origins allowed to call the API. Deployed, the
+    # frontend is same-origin behind /api/backend, so this stays empty there.
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     # Supabase Postgres connection string (Session Pooler recommended for serverless/edge deploys)
     database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/zakrely"

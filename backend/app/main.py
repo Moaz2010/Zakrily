@@ -7,9 +7,13 @@ from app.routers import voice
 
 app = FastAPI(title=settings.app_name)
 
+# A wildcard origin is invalid with allow_credentials=True: the browser rejects
+# the response, so requests appeared to fail even though the server answered
+# them. In production the frontend calls /api/backend on the same origin
+# (see vercel.json), so no cross-origin allowance is needed there.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.environment == "development" else [],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -168,3 +168,25 @@ def test_text_and_numeric_grading():
     assert not answer_matches(question, "5.01")
     assert not answer_matches(question, "NaN")
     assert not answer_matches(question, "Infinity")
+
+
+def test_cors_never_returns_a_wildcard_origin_with_credentials(client):
+    """A wildcard origin is rejected by browsers when credentials are allowed.
+
+    The server answered sign-up requests correctly, but the browser discarded
+    the response, so account creation appeared to fail for no reason.
+    """
+    origin = "http://localhost:3000"
+    preflight = client.options("/auth/register", headers={
+        "Origin": origin,
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type",
+    })
+    assert preflight.headers.get("access-control-allow-origin") == origin
+
+    posted = client.post("/auth/register", headers={"Origin": origin}, json={
+        "name": "CORS", "email": "cors@example.com", "password": "testpass123",
+    })
+    assert posted.status_code == 200
+    # Must echo the origin, not "*", and must match the preflight.
+    assert posted.headers.get("access-control-allow-origin") == origin
