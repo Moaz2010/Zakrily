@@ -35,10 +35,13 @@ import type {
   LearnerStats,
 } from "./types";
 
+/** Deployed, the backend is a Vercel service behind /api/backend on this same
+ *  origin (see vercel.json). Locally it runs separately on :8000. An explicit
+ *  NEXT_PUBLIC_API_URL overrides both. */
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   process.env.NEXT_PUBLIC_API_BASE_URL ??
-  "http://localhost:8000";
+  (process.env.NODE_ENV === "production" ? "/api/backend" : "http://localhost:8000");
 
 // ── Core fetch wrapper ────────────────────────────────────────────────────────
 
