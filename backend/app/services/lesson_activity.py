@@ -23,6 +23,10 @@ def load(db, user_id, lesson_id, lock=False):
         raise HTTPException(422, "This activity is available for Science, English, and Math lessons")
     bank = [(q, tag) for q, tag in approved_questions(db, lesson_id=lesson_id, include_unscored=True)
             if (q.grading_data or {}).get("number") is not None]
+    # Lead with questions that can be graded. Some Math items are worksheet
+    # instructions ("underline the digit…") that only carry a model answer, and
+    # opening the activity with one makes the lesson look broken.
+    bank.sort(key=lambda pair: not (pair[0].grading_data or {}).get("scored", True))
     progress = db.get(LessonProgress, (user_id, lesson_id))
     return lesson, bank, progress
 

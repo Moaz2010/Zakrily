@@ -156,6 +156,50 @@ export const practiceApi = {
 export const chatApi = {
   providers: () => apiFetch<ChatProvidersResponse>("/chat/providers"),
 
+  /** Streams the reply so it types out. `onDelta` fires per chunk. */
+  streamMessage: async (
+    sessionId: number,
+    body: ChatMessageRequest,
+    onDelta: (text: string) => void,
+    signal?: AbortSignal,
+  ): Promise<void> => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("zakrely_token") : null;
+    const res = await fetch(`${BASE_URL}/chat/sessions/${sessionId}/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+      signal,
+    });
+    if (!res.ok || !res.body) {
+      throw Object.assign(new Error(res.statusText), { status: res.status });
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      // SSE frames are separated by a blank line; keep any partial tail.
+      const frames = buffer.split("\n\n");
+      buffer = frames.pop() ?? "";
+      for (const frame of frames) {
+        const line = frame.split("\n").find((l) => l.startsWith("data:"));
+        if (!line) continue;
+        try {
+          const event = JSON.parse(line.slice(5).trim());
+          if (event.error) throw new Error("stream failed");
+          if (event.delta) onDelta(event.delta as string);
+        } catch {
+          // A malformed frame should not kill an otherwise working stream.
+        }
+      }
+    }
+  },
+
   createSession: (body: CreateSessionRequest) =>
     apiFetch<SessionOut>("/chat/sessions", {
       method: "POST",

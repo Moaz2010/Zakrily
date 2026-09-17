@@ -12,14 +12,17 @@ from app.models.lesson import Lesson
 from app.models.subject import Subject
 
 
-def explain(lesson_id: int, question: str, history: list[dict], *, db: Session | None = None,
-            provider: str | None = None, model: str | None = None) -> str:
-    if db is None:
-        with SessionLocal() as session:
-            return explain(lesson_id, question, history, db=session, provider=provider, model=model)
+def prepare(lesson_id: int, question: str, history: list[dict], db: Session,
+            provider: str | None) -> tuple[str | None, str, str | None]:
+    """Build the grounded prompt for one turn.
+
+    Returns (system_prompt, fallback_text, chosen_provider). A None provider
+    means the caller must send `fallback` instead of calling a model — either
+    nothing was retrieved or no provider is configured.
+    """
     lesson = db.get(Lesson, lesson_id)
     if lesson is None:
-        return "مش لاقية الدرس ده. ارجع لصفحة الدروس وجرب تاني."
+        return None, "مش لاقية الدرس ده. ارجع لصفحة الدروس وجرب تاني.", None
     subject = db.get(Subject, lesson.subject_id)
     query = question
     if history and re.fullmatch(
@@ -31,7 +34,8 @@ def explain(lesson_id: int, question: str, history: list[dict], *, db: Session |
     chunks = retrieve(query, lesson_id=lesson_id, k=settings.retrieval_k,
                       content_type=requested_type(query), db=db)
     if not chunks:
-        return "مش لاقية المعلومة دي في محتوى الدرس. جرّب تسأل عن فكرة من الدرس أو اكتب رقم السؤال واسم التمرين."
+        return None, ("مش لاقية المعلومة دي في محتوى الدرس. جرّب تسأل عن فكرة من الدرس "
+                      "أو اكتب رقم السؤال واسم التمرين."), None
     context = "\n\n".join(
         f"Source: {chunk.source_ref}\nType: {chunk.metadata['content_type']}\n{chunk.text}"
         for chunk in chunks
@@ -39,7 +43,7 @@ def explain(lesson_id: int, question: str, history: list[dict], *, db: Session |
     fallback = "الشرح الذكي مش متاح دلوقتي. دي مقتطفات من الدرس ممكن تساعدك:\n\n" + context
     chosen = providers.resolve(provider)
     if chosen is None:
-        return fallback
+        return None, fallback, None
     system = (
         f"You are Nawwara, a friendly Grade 4 tutor for {subject.name_en}, Unit 1, "
         f"Lesson {lesson.order_index}: {lesson.title}. "
@@ -54,6 +58,17 @@ def explain(lesson_id: int, question: str, history: list[dict], *, db: Session |
         "Cite the section heading or exercise/question number used in a short source note. "
         "Use readable plain text and simple lists.\n\nRetrieved lesson sources:\n" + context
     )
+    return system, fallback, chosen
+
+
+def explain(lesson_id: int, question: str, history: list[dict], *, db: Session | None = None,
+            provider: str | None = None, model: str | None = None) -> str:
+    if db is None:
+        with SessionLocal() as session:
+            return explain(lesson_id, question, history, db=session, provider=provider, model=model)
+    system, fallback, chosen = prepare(lesson_id, question, history, db, provider)
+    if chosen is None:
+        return fallback
     try:
         return providers.complete(
             chosen, system,
@@ -63,6 +78,28 @@ def explain(lesson_id: int, question: str, history: list[dict], *, db: Session |
     except providers.ProviderError:
         logging.getLogger(__name__).warning("Lesson explanation unavailable via %s", chosen)
         return fallback
+
+
+def explain_stream(lesson_id: int, question: str, history: list[dict], *, db: Session,
+                   provider: str | None = None, model: str | None = None):
+    """Yield the explanation in pieces. Falls back to one final chunk on failure."""
+    system, fallback, chosen = prepare(lesson_id, question, history, db, provider)
+    if chosen is None:
+        yield fallback
+        return
+    produced = False
+    try:
+        for piece in providers.stream(
+            chosen, system,
+            [*history[-10:], {"role": "user", "content": question}],
+            max_tokens=2400, model=model,
+        ):
+            produced = True
+            yield piece
+    except providers.ProviderError:
+        logging.getLogger(__name__).warning("Lesson explanation unavailable via %s", chosen)
+        if not produced:
+            yield fallback
 
 
 def converse(lesson_id: int, history: list[dict]) -> dict:
