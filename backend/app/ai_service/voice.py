@@ -5,6 +5,7 @@ import re
 import httpx
 from fastapi import HTTPException
 
+from app.ai_service import providers
 from app.ai_service.retrieval import retrieve
 from app.core.config import settings
 
@@ -40,19 +41,58 @@ def post(path, **kwargs):
         raise HTTPException(502, "خدمة الصوت مش متاحة دلوقتي. جرّب تاني بعد شوية.") from exc
 
 
+# Whisper follows the style of its prompt, so an Egyptian-Arabic sample biases
+# it away from transcribing Gulf/MSA spellings for the same spoken sounds.
+EGYPTIAN_PROMPT = "إزيك يا بطل؟ إحنا هنتكلم إنجليزي مع بعض. أنا عايز أتعلم. ماشي، يلا بينا."
+
+
 def transcribe(data, filename, content_type):
-    # No forced `language`: the tutor is explicitly bilingual (student may
-    # answer in Arabic or English), and pinning Whisper to "en" degrades
-    # accuracy on Arabic speech instead of helping it. Let Whisper detect it.
-    response = post(
-        "/audio/transcriptions",
-        files={"file": (filename, data, content_type)},
-        data={"model": settings.groq_whisper_model, "response_format": "json"},
-    )
-    text = response.json().get("text", "").strip()
+    """Speech to text. Prefers OpenAI Whisper, which handles Egyptian Arabic
+    noticeably better than the Groq build, and falls back to Groq when only
+    that key is configured.
+
+    No forced `language`: the tutor is bilingual (the student may answer in
+    Arabic or English), and pinning Whisper to one language degrades the other.
+    """
+    if settings.openai_api_key:
+        text = _transcribe_openai(data, filename, content_type)
+    elif settings.groq_api_key:
+        text = _transcribe_groq(data, filename, content_type)
+    else:
+        raise HTTPException(503, "المحادثة الصوتية محتاجة إعداد OPENAI_API_KEY أو GROQ_API_KEY على الخادم.")
+
     if not text or len(text) > 4000:
         raise HTTPException(422, "مش سامعة كلام واضح. جرّب تسجيل قصير تاني.")
     return text
+
+
+def _transcribe_openai(data, filename, content_type):
+    try:
+        with httpx.Client(timeout=60) as client:
+            response = client.post(
+                "https://api.openai.com/v1/audio/transcriptions",
+                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                files={"file": (filename, data, content_type)},
+                data={"model": settings.openai_whisper_model,
+                      "response_format": "json",
+                      "prompt": EGYPTIAN_PROMPT},
+            )
+            response.raise_for_status()
+            return response.json().get("text", "").strip()
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, "خدمة الصوت مش متاحة دلوقتي. جرّب تاني بعد شوية.") from exc
+    except ValueError as exc:
+        raise HTTPException(502, "تعذّر قراءة الرد الصوتي. جرّب تاني.") from exc
+
+
+def _transcribe_groq(data, filename, content_type):
+    response = post(
+        "/audio/transcriptions",
+        files={"file": (filename, data, content_type)},
+        data={"model": settings.groq_whisper_model, "response_format": "json",
+              "prompt": EGYPTIAN_PROMPT},
+    )
+    return response.json().get("text", "").strip()
 
 
 def _strip_markdown(answer: str) -> str:
@@ -72,6 +112,20 @@ def _strip_markdown(answer: str) -> str:
 
 
 def _call_model(system, history, text, max_tokens):
+    """Generate the tutor's spoken reply through whichever provider is configured.
+
+    Returns (content, finish_reason). Only Groq reports truncation, so the
+    other providers return None and the caller's retry path is skipped.
+    """
+    chosen = providers.resolve(None)
+    if chosen is None:
+        raise HTTPException(503, "المحادثة الصوتية محتاجة إعداد مفتاح موديل على الخادم.")
+    if chosen != providers.GROQ:
+        content = providers.complete(chosen, system,
+                                     [*history[-10:], {"role": "user", "content": text}],
+                                     max_tokens=max_tokens, timeout=60.0)
+        return content, None
+
     result = post("/chat/completions", json={
         "model": settings.groq_model,
         "max_completion_tokens": max_tokens,
@@ -144,7 +198,7 @@ def reply(lesson, history, text, db, first_turn=False):
             raise ValueError("Invalid reply")
 
         return answer
-    except (KeyError, IndexError, TypeError, ValueError) as exc:
+    except (KeyError, IndexError, TypeError, ValueError, providers.ProviderError) as exc:
         raise HTTPException(502, "تعذّر تجهيز الرد. جرّب تاني.") from exc
 
 
