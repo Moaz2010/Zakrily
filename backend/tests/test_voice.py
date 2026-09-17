@@ -55,13 +55,71 @@ def test_voice_lesson_scope_and_transcript_history(client, db, learner, monkeypa
 def test_rag_and_provider_payload(monkeypatch):
     retrieval = MagicMock(return_value=[SimpleNamespace(source_ref="lesson 1", text="We see with our eyes.")])
     monkeypatch.setattr(voice, "retrieve", retrieval)
+    monkeypatch.setattr(voice.providers.settings, "anthropic_api_key", "test-key")
+    captured = {}
+
+    def fake_complete(provider, system, messages, **kwargs):
+        captured["provider"], captured["system"] = provider, system
+        return "What can you see?"
+
+    monkeypatch.setattr(voice.providers, "complete", fake_complete)
+    assert voice.reply(SimpleNamespace(id=7, title="Five senses"), [], "hello", "db") == "What can you see?"
+    assert retrieval.call_args.kwargs["lesson_id"] == 7
+    assert "We see with our eyes." in captured["system"] and "Egyptian Grade 4" in captured["system"]
+
+
+def test_reply_still_uses_groqs_native_call_when_groq_is_the_provider(monkeypatch):
+    """Groq reports truncation via finish_reason, so it keeps its own code path."""
+    monkeypatch.setattr(voice, "retrieve", MagicMock(
+        return_value=[SimpleNamespace(source_ref="lesson 1", text="We see with our eyes.")]))
+    for key in ("anthropic_api_key", "openai_api_key"):
+        monkeypatch.setattr(voice.providers.settings, key, "")
+    monkeypatch.setattr(voice.providers.settings, "groq_api_key", "test-key")
     post = MagicMock()
     post.return_value.json.return_value = {"choices": [{"message": {"content": "What can you see?"}}]}
     monkeypatch.setattr(voice, "post", post)
     assert voice.reply(SimpleNamespace(id=7, title="Five senses"), [], "hello", "db") == "What can you see?"
-    assert retrieval.call_args.kwargs["lesson_id"] == 7
     system = post.call_args.kwargs["json"]["messages"][0]["content"]
-    assert "We see with our eyes." in system and "Egyptian Grade 4" in system
+    assert "We see with our eyes." in system
+
+
+def test_transcribe_prefers_openai_and_biases_egyptian_arabic(monkeypatch):
+    monkeypatch.setattr(voice.settings, "openai_api_key", "test-key")
+    sent = {}
+
+    class FakeClient:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def post(self, url, headers=None, files=None, data=None):
+            sent["url"], sent["data"] = url, data
+            response = MagicMock()
+            response.json.return_value = {"text": "إزيك يا نوارة"}
+            return response
+
+    monkeypatch.setattr(voice.httpx, "Client", lambda *a, **k: FakeClient())
+    assert voice.transcribe(b"audio", "clip.webm", "audio/webm") == "إزيك يا نوارة"
+    assert "api.openai.com" in sent["url"]
+    # No forced language, and an Egyptian-dialect prompt to steer spelling.
+    assert "language" not in sent["data"]
+    assert sent["data"]["prompt"] == voice.EGYPTIAN_PROMPT
+
+
+def test_transcribe_falls_back_to_groq_without_an_openai_key(monkeypatch):
+    monkeypatch.setattr(voice.settings, "openai_api_key", "")
+    monkeypatch.setattr(voice.settings, "groq_api_key", "test-key")
+    post = MagicMock()
+    post.return_value.json.return_value = {"text": "hello"}
+    monkeypatch.setattr(voice, "post", post)
+    assert voice.transcribe(b"audio", "clip.webm", "audio/webm") == "hello"
+    assert post.call_args.args[0] == "/audio/transcriptions"
+
+
+def test_transcribe_without_any_key_is_explicit(monkeypatch):
+    monkeypatch.setattr(voice.settings, "openai_api_key", "")
+    monkeypatch.setattr(voice.settings, "groq_api_key", "")
+    with pytest.raises(HTTPException) as error:
+        voice.transcribe(b"audio", "clip.webm", "audio/webm")
+    assert error.value.status_code == 503
 
 
 def test_gemini_tts_pcm_to_wav_header():
