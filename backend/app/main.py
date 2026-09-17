@@ -37,6 +37,35 @@ def health():
     return {"status": "ok"}
 
 
+@api.get("/health/db")
+def health_db():
+    """Report whether the database is actually reachable.
+
+    /health answers without touching the database, so it stays green while
+    every write fails. This says which part is broken, without exposing
+    credentials.
+    """
+    from sqlalchemy import text
+
+    from app.core.database import SessionLocal
+
+    url = settings.database_url
+    scheme = url.split("://", 1)[0] if "://" in url else "unset"
+    host = url.split("@", 1)[1].split("/", 1)[0] if "@" in url else "n/a"
+    info = {"scheme": scheme, "host": host, "configured": bool(url)}
+    try:
+        with SessionLocal() as db:
+            db.execute(text("select 1"))
+            tables = db.execute(text(
+                "select count(*) from information_schema.tables where table_schema='public'"
+                if scheme.startswith("postgresql")
+                else "select count(*) from sqlite_master where type='table'"
+            )).scalar()
+        return {**info, "connected": True, "tables": tables}
+    except Exception as exc:  # surfaced deliberately: this endpoint exists to diagnose
+        return {**info, "connected": False, "error": f"{type(exc).__name__}: {str(exc)[:300]}"}
+
+
 app.include_router(api)
 # Deployed behind a Vercel service, the request arrives with its original path
 # (/api/backend/...) rather than the stripped one, so the same routes are also
