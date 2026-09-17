@@ -44,7 +44,7 @@ The lesson introduces the five human senses, the body part associated with each 
 
 **Reading/Dialogue Content — "Let's Talk About Our Senses" (هيا بنا نتحدث عن حواسنا):**
 
-Context: Ms. Mona and the students are talking about the five senses in the school garden. (This dialogue is also the text used for the lesson's listening exercises.)
+Context: Ms. Mona and the students are talking about the five senses in the school garden.
 
 > **Ms. Mona:** Good morning, children! What a beautiful day in the school garden.
 > **Sami:** Good morning, Ms. Mona! What will we learn today?
@@ -57,6 +57,56 @@ Context: Ms. Mona and the students are talking about the five senses in the scho
 > **Ms. Mona:** Excellent, Salma! Those are your senses of smell and sight. Senses also help us stay safe.
 > **Sami:** Ms. Mona, how do our senses help us stay safe?
 > **Ms. Mona:** That's a great question, Sami! For example, if we smell smoke, we know there's a fire.
+
+**Comprehension Questions for the Dialogue:**
+
+**Q1:** Ms. Mona is our math teacher.
+**Skill:** Listening/Reading — Comprehension (literal detail, not directly stated)
+**A1:** F — The dialogue never identifies Ms. Mona as a math teacher; she is teaching the students about the five senses (an English/general-studies topic in this context).
+
+**Q2:** We will learn about our houses today.
+**Skill:** Listening/Reading — Comprehension (literal detail)
+**A2:** F — Ms. Mona says: "Today, we'll learn about our amazing senses," not houses.
+
+**Q3:** Senses help us understand the world around us.
+**Skill:** Listening/Reading — Comprehension (literal detail)
+**A3:** T — Stated directly: "Senses help us understand the world around us."
+
+**Q4:** Our senses are like sight, hearing and smell.
+**Skill:** Listening/Reading — Comprehension (literal detail)
+**A4:** T — Stated directly: "like sight, hearing, and smell."
+
+**Reading Passage:**
+
+> The five senses help us understand the world around us. We see shapes, colors and people with our eyes. We use our nose to smell the beautiful flowers. With our hands, we can touch things. We hear the birds singing with our ears. Our tongue lets us taste delicious food. Our senses help us stay safe. If we smell smoke, we know there's a fire.
+
+**Comprehension Questions for the Reading Passage:**
+
+**A. Choose the correct answer from a, b, c or d:**
+
+**Q1:** We use our ................. to see shapes and colors.
+a. eyes b. nose c. ears d. tongue
+**Skill:** Reading — Comprehension (literal detail)
+**A1:** a. eyes — "We see shapes, colors and people with our eyes."
+
+**Q2:** The text is about our ................. .
+a. school b. trash c. food d. senses
+**Skill:** Reading — Analytical (main idea)
+**A2:** d. senses — the whole passage explains what the five senses do.
+
+**B. Answer the following questions:**
+
+**Q3:** What do the five senses help us do?
+**Skill:** Reading — Comprehension (summarizing key idea)
+**A3:** The five senses help us understand the world around us and help us stay safe.
+
+**Q4:** Which sense helps us smell flowers?
+**Skill:** Reading — Comprehension (literal detail)
+**A4:** The sense of smell helps us smell flowers.
+
+**Q5:** Which body part do we use to taste food?
+**Skill:** Reading — Comprehension (literal detail)
+**A5:** We use our tongue to taste food.
 
 **Listening Script (short standalone sentences used for the listening exercise):**
 1. I taste delicious food with my tongue.
@@ -176,55 +226,6 @@ a. wonderful b. tired c. free d. sad
 **A2:** a. wonderful — "amazing" and "wonderful" are synonyms.
 
 ### 5.3 EL-MOASSER General Exercises on Lesson 1
-
-**Listen and write (T) True or (F) False:**
-*(Based on the printed "Let's Talk About Our Senses" dialogue, which is also the listening text for this exercise.)*
-
-**Q1:** Ms. Mona is our math teacher.
-**Skill:** Listening/Reading — Comprehension (literal detail, not directly stated)
-**A1:** F — The dialogue never identifies Ms. Mona as a math teacher; she is teaching the students about the five senses (an English/general-studies topic in this context).
-
-**Q2:** We will learn about our houses today.
-**Skill:** Listening/Reading — Comprehension (literal detail)
-**A2:** F — Ms. Mona says: "Today, we'll learn about our amazing senses," not houses.
-
-**Q3:** Senses help us understand the world around us.
-**Skill:** Listening/Reading — Comprehension (literal detail)
-**A3:** T — Stated directly: "Senses help us understand the world around us."
-
-**Q4:** Our senses are like sight, hearing and smell.
-**Skill:** Listening/Reading — Comprehension (literal detail)
-**A4:** T — Stated directly: "like sight, hearing, and smell."
-
-**Reading passage for this exercise:**
-
-> The five senses help us understand the world around us. We see shapes, colors and people with our eyes. We use our nose to smell the beautiful flowers. With our hands, we can touch things. We hear the birds singing with our ears. Our tongue lets us taste delicious food. Our senses help us stay safe. If we smell smoke, we know there's a fire.
-
-**A. Choose the correct answer from a, b, c or d:**
-
-**Q1:** We use our ................. to see shapes and colors.
-a. eyes b. nose c. ears d. tongue
-**Skill:** Reading — Comprehension (literal detail)
-**A1:** a. eyes — "We see shapes, colors and people with our eyes."
-
-**Q2:** The text is about our ................. .
-a. school b. trash c. food d. senses
-**Skill:** Reading — Analytical (main idea)
-**A2:** d. senses — the whole passage explains what the five senses do.
-
-**B. Answer the following questions:**
-
-**Q3:** What do the five senses help us do?
-**Skill:** Reading — Comprehension (summarizing key idea)
-**A3:** The five senses help us understand the world around us and help us stay safe.
-
-**Q4:** Which sense helps us smell flowers?
-**Skill:** Reading — Comprehension (literal detail)
-**A4:** The sense of smell helps us smell flowers.
-
-**Q5:** Which body part do we use to taste food?
-**Skill:** Reading — Comprehension (literal detail)
-**A5:** We use our tongue to taste food.
 
 **Punctuate the following:**
 

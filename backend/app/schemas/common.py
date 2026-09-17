@@ -32,6 +32,7 @@ class AttemptContextEnum(str, Enum):
 
 
 class ChatModeEnum(str, Enum):
+    lesson_explain = "lesson_explain"
     english_convo = "english_convo"
     science_explain = "science_explain"
 

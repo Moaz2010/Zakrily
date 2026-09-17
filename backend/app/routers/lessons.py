@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.lesson import Lesson
+from app.models.subject import Subject, SubjectSlug
 from app.models.user import User
 from app.schemas.lesson import LessonDetail
 from app.schemas.quiz import QuizOut
@@ -63,4 +64,8 @@ def get_lesson(lesson_id: int, current_user: User = Depends(get_current_user), d
 @router.get("/lessons/{lesson_id}/quiz", response_model=QuizOut)
 def get_quiz(lesson_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     accessible_lesson(db, current_user.id, lesson_id)
-    return QuizOut(questions=[public_question(q, tag) for q, tag in approved_questions(db, lesson_id=lesson_id)])
+    lesson = db.get(Lesson, lesson_id)
+    # Exclude comprehension questions from quiz for English lessons (they're in the learning path)
+    subject = db.get(Subject, lesson.subject_id) if lesson else None
+    exclude_comprehension = subject.slug == SubjectSlug.english if subject else False
+    return QuizOut(questions=[public_question(q, tag) for q, tag in approved_questions(db, lesson_id=lesson_id, exclude_comprehension=exclude_comprehension)])

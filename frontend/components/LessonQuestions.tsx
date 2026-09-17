@@ -56,9 +56,11 @@ function formatChildExplanation(
 export function LessonQuestions({
   lessonId,
   initialPractice = false,
+  subject = "science",
 }: {
   lessonId: number;
   initialPractice?: boolean;
+  subject?: string;
 }) {
   const { user, refresh } = useLearner();
   const [data, setData] = useState<ActivityState | null>(null);
@@ -203,7 +205,7 @@ export function LessonQuestions({
   return (
     <section
       className={styles.content}
-      style={subjectTheme("science")}
+      style={subjectTheme(subject)}
       dir="rtl"
       aria-label="أسئلة وتدريبات الدرس"
     >

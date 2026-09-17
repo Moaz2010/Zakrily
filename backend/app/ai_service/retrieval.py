@@ -8,7 +8,7 @@ from app.ai_service.embeddings import EMBEDDING_MODEL, embed, tokens
 from app.core.database import SessionLocal
 from app.models.content_chunk import ContentChunk
 from app.models.lesson import Lesson
-from app.models.subject import Subject, SubjectSlug
+from app.models.subject import Subject
 
 
 @dataclass
@@ -41,7 +41,6 @@ def retrieve(query: str, lesson_id: int, k: int = 5, *,
         ContentChunk.lesson_id == lesson_id,
         ContentChunk.subject_id == Subject.id,
         Lesson.is_published.is_(True),
-        ContentChunk.chunk_metadata["subject"].as_string() == "science",
         ContentChunk.chunk_metadata["content_type"].as_string() == kind,
         ContentChunk.chunk_metadata["embedding_model"].as_string() == EMBEDDING_MODEL,
     )

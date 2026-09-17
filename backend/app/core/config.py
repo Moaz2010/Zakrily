@@ -22,6 +22,14 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-6"
 
+    groq_api_key: str = ""
+    groq_model: str = "openai/gpt-oss-120b"
+    groq_whisper_model: str = "whisper-large-v3"
+
+    gemini_api_key: str = ""
+    gemini_tts_model: str = "gemini-2.5-flash-preview-tts"
+    gemini_tts_voice: str = "Aoede"  # warm female, handles Arabic + English
+
     quiz_pass_threshold: float = 0.6
     min_attempts_for_skill_display: int = 3
     chat_turn_limit: int = 10

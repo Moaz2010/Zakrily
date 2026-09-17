@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.routers import auth, chat, lessons, math, practice, progress, quiz, skills, subjects
+from app.routers import voice
 
 app = FastAPI(title=settings.app_name)
 
@@ -23,6 +24,7 @@ app.include_router(skills.router)
 app.include_router(practice.router)
 app.include_router(chat.router)
 app.include_router(math.router)
+app.include_router(voice.router)
 
 
 @app.get("/health")

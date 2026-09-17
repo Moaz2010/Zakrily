@@ -1,4 +1,4 @@
-"""Ingest the prepared Science / Unit 1 / Lesson 1 into the existing tables.
+"""Ingest prepared lesson sources for English, Math and Science.
 
 Run from backend: python -m scripts.ingest
 Re-running updates matching source chunks in place, retaining question references.
@@ -16,6 +16,7 @@ from app.models.subject import Subject, SubjectSlug
 
 SOURCE = Path(__file__).resolve().parents[2] / "content/science/unit 1/lesson_1.md"
 SOURCE_REF = "science/unit 1/lesson_1.md"
+CONTENT_ROOT = SOURCE.parents[2]
 CHUNK_MAX_WORDS = 500
 
 
@@ -32,15 +33,21 @@ def sections(text: str) -> list[tuple[str, str]]:
 
 
 def chunk_text(text: str, lesson_order: int = 1, source_ref_base: str = SOURCE_REF) -> list[SourceChunk]:
+    subject = source_ref_base.split("/")[0]
     chunks = []
     for section_number, (heading, body) in enumerate(sections(text), 1):
-        kind = "exercise" if heading.startswith(("6.", "7.")) else "explanation"
+        kind = "exercise" if re.search(r"exercises?|questions?|worked examples", heading, re.I) else "explanation"
         blocks = re.split(r"(?=^### )", body, flags=re.MULTILINE)
         for block_number, block in enumerate(blocks, 1):
             block = block.strip().strip("-\n ")
             if not block:
                 continue
             pieces = [block]
+            if kind == "exercise" and subject == "english":
+                # Keep Q/Skill/A together, including shared passage/instructions.
+                pairs = re.split(r"(?=^\*\*Q\d+:\*\*)", block, flags=re.MULTILINE)
+                if len(pairs) > 1:
+                    pieces = [pairs[0] + "\n" + pair for pair in pairs[1:]]
             if kind == "explanation" and len(block.split()) > CHUNK_MAX_WORDS:
                 pieces = []
                 current = []
@@ -52,8 +59,8 @@ def chunk_text(text: str, lesson_order: int = 1, source_ref_base: str = SOURCE_R
                 if current:
                     pieces.append("\n\n".join(current))
             for part_number, piece in enumerate(pieces, 1):
-                question = re.match(r"### Question (\d+)", block)
-                metadata = dict(subject="science", unit=1, lesson=lesson_order, content_type=kind,
+                question = re.search(r"(?:^### Question |^\*\*Q)(\d+)", piece, re.M)
+                metadata = dict(subject=subject, unit=1, lesson=lesson_order, content_type=kind,
                                 section=heading, embedding_model=EMBEDDING_MODEL)
                 if question:
                     metadata["question_number"] = int(question[1])
@@ -63,20 +70,27 @@ def chunk_text(text: str, lesson_order: int = 1, source_ref_base: str = SOURCE_R
 
 
 def ingest_file(path: Path = SOURCE, subject_id: int | None = None, lesson_id: int | None = None, allow_other: bool = False):
-    if path.resolve() != SOURCE.resolve() and not allow_other:
-        raise ValueError("Only the prepared Science Unit 1 Lesson 1 source is supported.")
+    path = path.resolve()
+    relative = path.relative_to(CONTENT_ROOT.resolve())
+    if len(relative.parts) != 3 or relative.parts[0] not in {s.value for s in SubjectSlug} or relative.parts[1] != "unit 1":
+        raise ValueError("Expected content/<subject>/unit 1/<lesson>.md")
     text = path.read_text(encoding="utf-8")
-    match = re.search(r"lesson_(\d+)\.md", path.name)
-    lesson_order = int(match.group(1)) if match else 1
-    source_ref_base = f"science/unit 1/lesson_{lesson_order}.md"
+    match = re.fullmatch(r"lesson_?(\d+)(?:_[\w]+)?\.md", path.name)
+    if not match:
+        raise ValueError("Source filename must identify its lesson number")
+    lesson_order = int(match.group(1))
+    subject_slug = relative.parts[0]
+    source_ref_base = relative.as_posix()
 
     chunks = chunk_text(text, lesson_order=lesson_order, source_ref_base=source_ref_base)
     if not chunks or {c.metadata["content_type"] for c in chunks} != {"explanation", "exercise"}:
         raise ValueError("Source must contain explanations and exercises; nothing was written.")
     with SessionLocal() as db:
         lesson = db.query(Lesson).join(Subject).filter(
-            Subject.slug == SubjectSlug.science, Lesson.order_index == lesson_order,
+            Subject.slug == SubjectSlug(subject_slug), Lesson.order_index == lesson_order,
         ).one_or_none()
+        if lesson is None:
+            raise ValueError("Lesson not found; run python -m scripts.seed first")
         if (lesson_id is not None and lesson_id != lesson.id) or (subject_id is not None and subject_id != lesson.subject_id):
             raise ValueError("Provided IDs do not identify this lesson.")
 
@@ -99,7 +113,7 @@ def ingest_file(path: Path = SOURCE, subject_id: int | None = None, lesson_id: i
             row.heading, row.body_md = heading, body
         lesson.is_published = True
         db.commit()
-        print(f"Ingested {len(chunks)} typed chunks for Science Unit 1 Lesson {lesson_order} (id={lesson.id}).")
+        print(f"Ingested {len(chunks)} typed chunks for {subject_slug} Unit 1 Lesson {lesson_order} (id={lesson.id}).")
 
 
 def main():
@@ -107,8 +121,15 @@ def main():
     parser.add_argument("path", nargs="?", type=Path, default=SOURCE)
     parser.add_argument("--subject-id", type=int)
     parser.add_argument("--lesson-id", type=int)
+    parser.add_argument("--all", action="store_true", help="Ingest every prepared lesson in content")
     args = parser.parse_args()
-    ingest_file(args.path, args.subject_id, args.lesson_id)
+    if args.all:
+        if args.subject_id is not None or args.lesson_id is not None:
+            parser.error("--all cannot be combined with explicit IDs")
+        for path in sorted(CONTENT_ROOT.glob("*/unit 1/*.md")):
+            ingest_file(path)
+    else:
+        ingest_file(args.path, args.subject_id, args.lesson_id)
 
 
 if __name__ == "__main__":

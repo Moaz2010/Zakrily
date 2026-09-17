@@ -9,13 +9,13 @@ from sqlalchemy.orm import Session
 
 from app.models.attempt import Attempt, AttemptContext
 from app.models.lesson import Lesson
-from app.models.question import Question, QuestionType, ReviewStatus, SkillTag
+from app.models.question import Question, QuestionType, ReviewStatus, SkillTag, SkillTagSlug
 from app.schemas.quiz import QuestionPublic, QuestionResult, SkillBreakdownItem
 from app.services.scoring import has_sufficient_data
 from app.services.answer_ideas import matches_ideas
 
 
-def approved_questions(db: Session, lesson_id: int | None = None, subject_id: int | None = None, include_unscored: bool = False):
+def approved_questions(db: Session, lesson_id: int | None = None, subject_id: int | None = None, include_unscored: bool = False, exclude_comprehension: bool = False):
     query = db.query(Question, SkillTag).join(SkillTag, Question.skill_tag_id == SkillTag.id).join(
         Lesson, Question.lesson_id == Lesson.id,
     ).filter(Question.review_status == ReviewStatus.approved, Lesson.is_published.is_(True))
@@ -23,6 +23,8 @@ def approved_questions(db: Session, lesson_id: int | None = None, subject_id: in
         query = query.filter(Question.lesson_id == lesson_id)
     if subject_id is not None:
         query = query.filter(Lesson.subject_id == subject_id)
+    if exclude_comprehension:
+        query = query.filter(SkillTag.slug != SkillTagSlug.comprehension)
     return [(q, tag) for q, tag in query.order_by(Question.id).all()
             if include_unscored or (q.grading_data or {}).get("scored", True)]
 

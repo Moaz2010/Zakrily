@@ -10,9 +10,9 @@ from collections import Counter
 
 from app.models.content_chunk import EMBEDDING_DIM
 
-EMBEDDING_MODEL = "lexical-hash-v1"
+EMBEDDING_MODEL = "lexical-hash-v2"
 STOP_WORDS = set("a an the is are was were be to of in on at for and or with what why how explain please me about this that it do does can lesson question answer".split())
-# Search aliases for the prepared English lesson in the existing Arabic UI.
+# Search aliases for lesson vocabulary across the three subjects.
 ALIASES = {
     "الكائنات الحية": "living organisms", "غير الحية": "non living",
     "الموطن": "habitat", "موطن": "habitat", "المواطن": "habitats",
@@ -22,6 +22,15 @@ ALIASES = {
     "العقرب": "scorpion", "العقارب": "scorpions", "السحلية": "lizard",
     "العنكبوت": "spider", "العصفور": "sparrow", "الصخور": "rocks",
     "الصحراء": "desert", "الماء": "water", "الشمس": "sun",
+    "الحواس": "senses", "حواس": "senses", "التذوق": "taste",
+    "اللمس": "touch", "السمع": "hearing", "الإبصار": "sight",
+    "البصر": "sight", "الشم": "smell", "اللسان": "tongue",
+    "العادات الصحية": "healthy habits", "جحا": "goha",
+    "القيمة المكانية": "place value", "قيمة مكانية": "place value",
+    "الآحاد": "ones", "العشرات": "tens", "المئات": "hundreds",
+    "الألوف": "thousands", "الكسور العشرية": "decimals",
+    "الأعداد العشرية": "decimals", "الجمع": "addition", "الطرح": "subtraction",
+    "المقارنة": "comparing", "التقريب": "rounding", "تقريب": "rounding",
 }
 
 

@@ -1,4 +1,3 @@
-from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -45,8 +44,6 @@ def test_ingestion_is_repeatable_and_only_publishes_this_lesson(db, science):
     assert db.query(ContentChunk).filter(ContentChunk.lesson_id != science.id).count() == 0
     with pytest.raises(ValueError):
         ingest.ingest_file(lesson_id=1)
-    with pytest.raises(ValueError):
-        ingest.ingest_file(ingest.SOURCE.with_name("lesson_2.md"))
 
 
 def test_retrieval_scopes_and_empty_results(db, science):
@@ -77,48 +74,47 @@ def test_website_path_chat_and_actual_grounding(client, db, science, monkeypatch
     detail = client.get(f"/lessons/{science.id}").json()
     assert detail["lesson"]["id"] == science.id
     assert len(detail["sections"]) == 9
-    monkeypatch.setattr(chat.settings, "anthropic_api_key", "test-key")
+    monkeypatch.setattr(chat.settings, "groq_api_key", "test-key")
     provider = MagicMock()
-    provider.messages.create.return_value = SimpleNamespace(content=[SimpleNamespace(type="text", text="Grounded response")])
+    provider.post.return_value.json.return_value = {"choices": [{"message": {"content": "Grounded response"}}]}
     factory = MagicMock()
     factory.return_value.__enter__.return_value = provider
-    monkeypatch.setattr(chat, "Anthropic", factory)
+    monkeypatch.setattr(chat.httpx, "Client", factory)
     session = client.post("/chat/sessions", json={"lesson_id": science.id, "mode": "science_explain"})
     assert session.status_code == 200
     url = f"/chat/sessions/{session.json()['session_id']}/message"
     response = client.post(url, json={"content": "What is a habitat?"})
     assert response.status_code == 200 and response.json()["reply"] == "Grounded response"
-    prompt = provider.messages.create.call_args.kwargs
-    assert "The place where a living organism lives" in prompt["system"]
-    assert "Type: explanation" in prompt["system"] and "**ANSWER:**" not in prompt["system"]
+    prompt = provider.post.call_args.kwargs["json"]
+    assert "The place where a living organism lives" in prompt["messages"][0]["content"]
+    assert "Type: explanation" in prompt["messages"][0]["content"] and "**ANSWER:**" not in prompt["messages"][0]["content"]
     client.post(url, json={"content": "Answer question 20"})
-    prompt = provider.messages.create.call_args.kwargs
-    assert "### Question 20" in prompt["system"] and "**Options:**" in prompt["system"]
-    assert "**MODEL ANSWER:**" in prompt["system"] and "Type: explanation" not in prompt["system"]
-    assert prompt["messages"][0]["content"] == "What is a habitat?"
+    prompt = provider.post.call_args.kwargs["json"]
+    assert "### Question 20" in prompt["messages"][0]["content"] and "**Options:**" in prompt["messages"][0]["content"]
+    assert "**MODEL ANSWER:**" in prompt["messages"][0]["content"] and "Type: explanation" not in prompt["messages"][0]["content"]
+    assert prompt["messages"][1]["content"] == "What is a habitat?"
     client.post(url, json={"content": "Explain habitat"})
-    assert "Type: exercise" not in provider.messages.create.call_args.kwargs["system"]
-    count = provider.messages.create.call_count
+    assert "Type: exercise" not in provider.post.call_args.kwargs["json"]["messages"][0]["content"]
+    count = provider.post.call_count
     result = client.post(url, json={"content": "quantum entanglement"})
-    assert "couldn't find" in result.json()["reply"]
-    assert provider.messages.create.call_count == count
+    assert "مش لاقية" in result.json()["reply"]
+    assert provider.post.call_count == count
     assert client.post(url, json={"content": " "}).status_code == 422
     client.headers["Authorization"] = f"Bearer {create_access_token(str(other.id))}"
     assert client.post(url, json={"content": "Question 1"}).status_code == 404
     assert client.post("/chat/sessions/9999/message", json={"content": "Question 1"}).status_code == 404
-    assert client.post("/chat/sessions", json={"lesson_id": 1, "mode": "science_explain"}).status_code == 400
+    assert client.post("/chat/sessions", json={"lesson_id": 1, "mode": "science_explain"}).status_code == 200
 
 
 def test_missing_key_and_provider_failure_use_only_retrieved_excerpts(db, science, monkeypatch):
-    monkeypatch.setattr(chat.settings, "anthropic_api_key", "")
+    monkeypatch.setattr(chat.settings, "groq_api_key", "")
     response = chat.explain(science.id, "Answer question 20", [], db=db)
-    assert "unavailable" in response and "### Question 20" in response
+    assert "مش متاح" in response and "### Question 20" in response
     assert "### Question 21" not in response
-    monkeypatch.setattr(chat.settings, "anthropic_api_key", "test-key")
+    monkeypatch.setattr(chat.settings, "groq_api_key", "test-key")
     import httpx
-    from anthropic import APIConnectionError
     factory = MagicMock()
-    factory.return_value.__enter__.return_value.messages.create.side_effect = APIConnectionError(request=httpx.Request("POST", "https://api.anthropic.com/v1/messages"))
-    monkeypatch.setattr(chat, "Anthropic", factory)
+    factory.return_value.__enter__.return_value.post.side_effect = httpx.ConnectError("offline")
+    monkeypatch.setattr(chat.httpx, "Client", factory)
     response = chat.explain(science.id, "Answer question 20", [], db=db)
-    assert "temporarily unavailable" in response and "### Question 20" in response
+    assert "مش متاح" in response and "### Question 20" in response

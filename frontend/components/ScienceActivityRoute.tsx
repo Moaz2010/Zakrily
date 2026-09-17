@@ -8,7 +8,11 @@ import { subjectTheme } from "@/lib/subject-theme";
 import styles from "./StudySession.module.css";
 
 /** Keep existing quiz/practice links on the same saved lesson activity. */
-export function ScienceActivityRoute({ lessonId, practice, fallback }: { lessonId: number; practice: boolean; fallback: ReactNode }) {
+export function ScienceActivityRoute({
+  lessonId, practice, fallback, subject = "science",
+}: {
+  lessonId: number; practice: boolean; fallback: ReactNode; subject?: string;
+}) {
   const [supported, setSupported] = useState<boolean | null>(null);
   const [failed, setFailed] = useState(false);
   const [retry, setRetry] = useState(0);
@@ -16,7 +20,9 @@ export function ScienceActivityRoute({ lessonId, practice, fallback }: { lessonI
     let active = true;
     setFailed(false);
     setSupported(null);
-    lessonsApi.get(lessonId).then(() => { if (active) setSupported(true); }).catch(() => { if (active) setFailed(true); });
+    lessonsApi.activity(lessonId)
+      .then((data) => { if (active) setSupported((data.total ?? 0) > 0); })
+      .catch(() => { if (active) setFailed(true); });
     return () => { active = false; };
   }, [lessonId, retry]);
   if (failed)
@@ -36,9 +42,9 @@ export function ScienceActivityRoute({ lessonId, practice, fallback }: { lessonI
   if (supported === null) return <p role="status" className="p-6" dir="rtl">جاري تحميل أسئلة الدرس…</p>;
   if (!supported) return fallback;
   return (
-    <div className={styles.page} style={subjectTheme("science")}>
-      <StudySessionHeader subject="science" lessonId={lessonId} practice={practice} />
-      <LessonQuestions key={lessonId} lessonId={lessonId} initialPractice={practice} />
+    <div className={styles.page} style={subjectTheme(subject)}>
+      <StudySessionHeader subject={subject} lessonId={lessonId} practice={practice} />
+      <LessonQuestions key={lessonId} lessonId={lessonId} initialPractice={practice} subject={subject} />
     </div>
   );
 }

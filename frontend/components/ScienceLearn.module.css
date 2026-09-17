@@ -3,7 +3,7 @@
 .learnContainer {
   display: flex;
   flex-direction: column;
-  height: clamp(480px, calc(100vh - 210px), 720px);
+  height: clamp(300px, calc(100dvh - 360px), 680px);
   max-width: 760px;
   margin: 0 auto;
   padding: 12px 16px;
@@ -641,6 +641,206 @@
     opacity: 1;
     transform: scale(1);
   }
+}
+
+.choices2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.speechList {
+  display: grid;
+  gap: 8px;
+}
+
+.speech {
+  border: 1.5px solid #d8e1dc;
+  border-bottom-width: 3px;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.speechTeacher {
+  background: #edf3e7;
+  border-color: #c4cebf;
+}
+
+.speechName {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--green);
+  margin-bottom: 2px;
+}
+
+.senseGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.senseTile {
+  text-align: center;
+  border: 1.5px solid #d5dfd0;
+  border-bottom-width: 4px;
+  border-radius: 18px;
+  padding: 12px 8px;
+  background: #edf3e7;
+}
+
+.senseTile strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.senseTile small {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #536b62;
+}
+
+.englishLearn {
+  --green: var(--subject-color, #597b96);
+  --green-dark: #3d5368;
+  --green-light: #e7eef4;
+}
+
+.englishLearn .duoHeroIcon,
+.englishLearn .cardBadge,
+.englishLearn .senseTile,
+.englishLearn .conceptCard,
+.englishLearn .living,
+.englishLearn .speechTeacher,
+.englishLearn .challenge,
+.englishLearn .scientistQuestion {
+  border-color: #c5d2de;
+}
+
+.englishLearn .duoCelebrationCard {
+  background: var(--green-light);
+  border-color: #b7c7d6;
+  border-bottom-color: var(--green);
+}
+
+.englishLearn .duoCelebrationCard p,
+.englishLearn .senseTile small {
+  color: #4d6274;
+}
+
+.englishLearn .duoBtnNext {
+  box-shadow: 0 3px 0 var(--green-dark);
+}
+
+.englishLearn .duoBtnComplete {
+  background: var(--green) !important;
+  border-color: var(--green-dark) !important;
+}
+
+.englishLearn .senseTile,
+.englishLearn .conceptCard,
+.englishLearn .living {
+  background: var(--green-light);
+}
+
+.englishHint {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--green);
+}
+
+.vocabTile {
+  border-radius: 16px;
+  border: 1.5px solid #d5dfd0;
+  border-bottom-width: 4px;
+  background: #ffffff;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.vocabTile strong,
+.factRow strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.vocabTile small {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #536b62;
+}
+
+.passage {
+  background: #ffffff;
+  border: 1.5px solid #d8e1dc;
+  border-bottom-width: 3px;
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.85;
+}
+
+.matchBoard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.matchCol {
+  display: grid;
+  gap: 8px;
+}
+
+.matchCol > span,
+.matchLabel {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--green);
+  text-align: center;
+}
+
+.matchCol button {
+  background: #ffffff;
+  border: 2px solid #d5dfd7;
+  border-bottom-width: 4px;
+  border-radius: 14px;
+  padding: 8px 6px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.matchCol button > span {
+  display: block;
+  font-size: 20px;
+  margin-bottom: 2px;
+}
+
+.matchCol button[aria-pressed="true"] {
+  border-color: var(--green);
+  background: var(--green-light);
+}
+
+.matchCol button[data-matched="true"] {
+  border-color: #6a9a6a;
+  background: #e5f0e4;
+  cursor: default;
+}
+
+.factRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--green-light);
+  border: 1.5px solid #c5d2de;
+  border-radius: 14px;
+  padding: 10px 12px;
 }
 
 @media (max-width: 480px) {

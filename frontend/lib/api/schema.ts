@@ -67,7 +67,7 @@ export type ChatMessageResponse = {
   "feedback"?: string | null;
 };
 
-export type ChatModeEnum = "english_convo" | "science_explain";
+export type ChatModeEnum = "lesson_explain" | "english_convo" | "science_explain";
 
 export type ChatSessionCreateRequest = {
   "lesson_id": number;

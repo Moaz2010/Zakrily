@@ -169,6 +169,10 @@ export const chatApi = {
 // ── Math ──────────────────────────────────────────────────────────────────────
 
 export const mathApi = {
+  check: (lessonId: number, questionId: number, answer: string) =>
+    apiFetch<{ is_correct: boolean; correct_answer: string; explanation: string }>(`/math/lessons/${lessonId}/check`, {
+      method: "POST", body: JSON.stringify({ question_id: questionId, answer }),
+    }),
   /** Multipart: image file + question_id form field */
   submit: (image: File, questionId: number) => {
     const form = new FormData();
@@ -178,5 +182,15 @@ export const mathApi = {
       method: "POST",
       body: form,
     });
+  },
+};
+
+export type VoiceReply = { session_id: number; reply: string; transcript: string; audio: string[]; audio_error: string | null; done: boolean };
+export const voiceApi = {
+  start: (lessonId: number, signal?: AbortSignal) => apiFetch<VoiceReply>(`/voice/lessons/${lessonId}/start`, { method: "POST", signal }),
+  turn: (sessionId: number, audio: Blob, signal?: AbortSignal) => {
+    const form = new FormData();
+    form.append("audio", audio, "recording");
+    return apiFetch<VoiceReply>(`/voice/sessions/${sessionId}/turn`, { method: "POST", body: form, signal });
   },
 };

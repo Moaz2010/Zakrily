@@ -107,7 +107,7 @@ export default function LearningPathPage() {
 
       {loading ? <div className={styles.message} role="status">جاري تحميل الدروس…</div> : error ? (
         <div className={styles.message} role="alert"><p>تعذر تحميل الدروس. حاول مرة أخرى.</p><button onClick={() => setRetry((n) => n + 1)}>إعادة المحاولة</button></div>
-      ) : !nodes.length ? <div className={styles.message}>لا توجد دروس متاحة بعد.</div> : mode === "practice" ? <TrainingActivities subject={slug} lessonId={(current ?? nodes[nodes.length - 1]).lesson_id} /> : <>
+      ) : !nodes.length ? <div className={styles.message}>لا توجد دروس متاحة بعد.</div> : mode === "practice" ? <TrainingActivities subject={slug} lessonId={(current ?? nodes[nodes.length - 1]).lesson_id} lessonActivity={slug === "science" || (slug === "english" && (current ?? nodes[nodes.length - 1]).order === 1)} /> : <>
         <div ref={viewport} className={styles.viewport} tabIndex={0} role="region" aria-label="مسار الدروس — مرر لأعلى لعرض الدروس التالية">
           <div className={styles.map} style={{ height }}>
             <Leaves className={styles.leavesRight} /><Leaves className={styles.leavesLeft} />

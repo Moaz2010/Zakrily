@@ -5,7 +5,6 @@ from app.ai_service.chat import converse, explain
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.chat import ChatMode, ChatSession, ChatMessage, ChatRole
-from app.models.subject import Subject, SubjectSlug
 from app.models.user import User
 from app.schemas.chat import (
     ChatMessageRequest, ChatMessageResponse,
@@ -21,11 +20,9 @@ router = APIRouter(tags=["chat"])
 def create_session(payload: ChatSessionCreateRequest, current_user: User = Depends(get_current_user),
                    db: Session = Depends(get_db)):
     lesson = accessible_lesson(db, current_user.id, payload.lesson_id)
-    if payload.mode == ChatMode.science_explain:
-        subject = db.get(Subject, lesson.subject_id)
-        if subject.slug != SubjectSlug.science:
-            raise HTTPException(400, "Science chat is available only for Science lessons")
-    session = ChatSession(user_id=current_user.id, lesson_id=lesson.id, mode=ChatMode(payload.mode))
+    # Keep the existing stored enum compatible with deployed databases and sessions.
+    mode = ChatMode.science_explain if payload.mode == "lesson_explain" else ChatMode(payload.mode)
+    session = ChatSession(user_id=current_user.id, lesson_id=lesson.id, mode=mode)
     db.add(session)
     db.commit()
     db.refresh(session)

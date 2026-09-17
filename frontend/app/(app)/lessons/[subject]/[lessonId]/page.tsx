@@ -6,8 +6,9 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { lessonsApi, subjectsApi, type LessonDetailOut, type PathNodeOut } from "@/lib/api";
 import { getSubject } from "@/lib/curriculum";
 import { TrainingActivities } from "@/components/TrainingActivities";
-import { ScienceLessonChat } from "@/components/ScienceLessonChat";
+import { LessonChat } from "@/components/LessonChat";
 import { ScienceLearn } from "@/components/ScienceLearn";
+import { EnglishLearn } from "@/components/EnglishLearn";
 import { GenericLearn } from "@/components/GenericLearn";
 import { percentage } from "@/lib/learner-context";
 import styles from "../path.module.css";
@@ -56,17 +57,18 @@ export default function LessonDetailPage() {
     {lesson.status === "locked" ? (
       <p className="p-6">أكمل الدرس السابق لفتح هذا الدرس.</p>
     ) : mode === "practice" ? (
-      <TrainingActivities subject={subject} lessonId={lesson.lesson_id} scienceLesson={subject === "science"} />
+      <TrainingActivities subject={subject} lessonId={lesson.lesson_id} lessonActivity={subject === "science" || (subject === "english" && lesson.order === 1)} />
     ) : subject === "science" && detail.sections.length > 0 ? (
       <ScienceLearn key={`learn-${lesson.lesson_id}`} sections={detail.sections} lessonId={lesson.lesson_id} onProgress={() => { subjectsApi.path(subject).then(setNodes).catch(() => {}); }} onCompletePractice={() => setMode("practice")} />
+    ) : subject === "english" && lesson.order === 1 ? (
+      <EnglishLearn key={`learn-${lesson.lesson_id}`} lessonId={lesson.lesson_id} onProgress={() => { subjectsApi.path(subject).then(setNodes).catch(() => {}); }} onCompletePractice={() => setMode("practice")} />
     ) : (
       <GenericLearn key={`generic-${lesson.lesson_id}`} sections={detail.sections} onCompletePractice={() => setMode("practice")} />
     )}
-    {lesson.status !== "locked" && mode === "lesson" && (
-      <ScienceLessonChat
+    {lesson.status !== "locked" && (
+      <LessonChat
         key={`chat-${lesson.lesson_id}`}
         lessonId={lesson.lesson_id}
-        sections={detail.sections}
         subject={subject}
         lessonTitle={detail?.lesson.title ?? lesson.title}
       />
