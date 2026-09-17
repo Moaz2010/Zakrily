@@ -13,14 +13,15 @@ const COLORS: Record<string, { bg: string; ring: string }> = {
 export default function HomePage() {
   const { stats } = useLearner();
   return <div className={styles.page}>
+    <div className={styles.scroll}>
     <HomeOverview />
     <StatsStatus />
-    <div className="flex gap-3 overflow-x-auto pb-4 pt-1 no-scrollbar scroll-smooth" dir="ltr">
+    <div className={styles.subjectRow} dir="ltr">
       {stats?.subjects.map((subject) => {
         const colors = COLORS[subject.slug];
         const progress = subject.total_lessons ? subject.completed_lessons / subject.total_lessons * 100 : 0;
-        return <Link key={subject.id} href={`/lessons/${subject.slug}`} className="flex-shrink-0 w-[155px]">
-          <div style={{ backgroundColor: colors.bg }} className="rounded-2xl p-3.5 flex flex-col justify-between min-h-[290px] shadow-md">
+        return <Link key={subject.id} href={`/lessons/${subject.slug}`} className={styles.subjectLink}>
+          <div style={{ backgroundColor: colors.bg }} className={styles.subjectCard}>
             <div><p className="text-white font-bold text-end text-base">{subject.name_ar}</p><p className="text-white/70 text-xs text-end mt-0.5 line-clamp-2">{subject.next_lesson ? `التالي: ${subject.next_lesson.title}` : subject.total_lessons ? "أكملت كل الدروس" : "لا توجد دروس بعد"}</p></div>
             <div className="flex items-center justify-center my-2"><CircleProgress value={subject.accuracy} color={colors.ring} /></div>
             <p className="text-white/80 text-xs text-center">متوسط الدقة</p>
@@ -30,6 +31,7 @@ export default function HomePage() {
           </div>
         </Link>;
       })}
+    </div>
     </div>
   </div>;
 }

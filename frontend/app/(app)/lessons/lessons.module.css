@@ -1,18 +1,20 @@
-.page { min-height: 100svh; background: #f7f7f7; color: #292c32; padding-bottom: 28px; }
-.header { position: relative; isolation: isolate; overflow: hidden; padding: 34px 24px 28px; background: #eeefe9; border-radius: 0 0 38px 38px; }
-.eyebrow { display: block; color: #626d67; font-size: 12px; font-weight: 650; margin-bottom: 9px; }
-.header h1 { font-size: 38px; font-weight: 850; line-height: 1.4; margin: 0; }
+/* Header is fixed height; cards below share what's left. */
+.page { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #f7f7f7; color: #292c32; }
+.header { flex-shrink: 0; position: relative; isolation: isolate; overflow: hidden; padding: clamp(14px, 2.4svh, 30px) 24px clamp(12px, 2svh, 24px); background: #eeefe9; border-radius: 0 0 38px 38px; }
+.eyebrow { display: block; color: #626d67; font-size: 11px; font-weight: 650; margin-bottom: clamp(3px, .8svh, 8px); }
+.header h1 { font-size: clamp(24px, 4.6svh, 36px); font-weight: 850; line-height: 1.25; margin: 0; }
 .header p { font-size: 14px; color: #626d67; margin-top: 5px; }
 .petals { position: absolute; inset-block-start: -16px; inset-inline-end: -24px; width: 152px; height: 168px; z-index: -1; opacity: .17; pointer-events: none; }
 .petals img { position: absolute; width: 108px; height: 108px; object-fit: contain; }
 .petals img:first-child { inset-block-start: 0; inset-inline-end: 0; transform: rotate(12deg); }
 .petals img:last-child { inset-block-start: 79px; inset-inline-end: 58px; width: 72px; height: 72px; transform: rotate(-12deg); }
-.content { padding: 18px 20px 0; }
-.overview { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 18px; margin-bottom: 18px; background: #e6e9e3; border-radius: 20px; }
+/* Cards share the leftover height and shrink to fit rather than overflowing. */
+.content { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: clamp(8px, 1.4svh, 14px); padding: clamp(10px, 1.8svh, 18px) 20px calc(80px + env(safe-area-inset-bottom)); overflow: hidden; }
+.overview { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: clamp(7px, 1.3svh, 13px) 18px; margin-bottom: 0; background: #e6e9e3; border-radius: 20px; }
 .overview span { font-size: 13px; font-weight: 650; }
-.overview strong { font-size: 23px; font-weight: 850; color: #527f76; }
-.subjects { display: flex; flex-direction: column; gap: 16px; }
-.card { --card-color: #4a638c; --doodle-color: #b1c7ef; position: relative; isolation: isolate; overflow: hidden; display: block; padding: 22px 24px; border-radius: 38px; color: #fff; background: var(--card-color); text-decoration: none; transition: transform .18s ease; }
+.overview strong { font-size: clamp(18px, 2.9svh, 23px); font-weight: 850; color: #527f76; }
+.subjects { display: flex; flex-direction: column; gap: clamp(8px, 1.4svh, 16px); flex: 1; min-height: 0; }
+.card { --card-color: #4a638c; --doodle-color: #b1c7ef; position: relative; isolation: isolate; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; flex: 1; min-height: 0; padding: clamp(12px, 2svh, 22px) 24px; border-radius: clamp(24px, 4svh, 38px); color: #fff; background: var(--card-color); text-decoration: none; transition: transform .18s ease; }
 .english { --card-color: #4a638c; --doodle-color: #b1c7ef; }
 .math { --card-color: #99605f; --doodle-color: #efb0aa; }
 .science { --card-color: #527f76; --doodle-color: #bbd9bd; }
@@ -21,9 +23,9 @@
 .science .doodle { transform: rotate(-28deg); inset-inline-end: -24%; }
 .cardHeading { position: relative; }
 .subjectName { display: block; font-size: 11px; font-weight: 650; letter-spacing: .08em; margin-bottom: 5px; }
-.card h2 { margin: 0; font-size: clamp(25px, 7vw, 30px); font-weight: 850; line-height: 1.45; }
+.card h2 { margin: 0; font-size: clamp(20px, 4svh, 29px); font-weight: 850; line-height: 1.25; }
 .unit { max-width: 95%; margin-top: 4px; font-size: 11px; line-height: 1.6; text-align: end; text-wrap: pretty; }
-.cardFooter { display: flex; align-items: flex-end; justify-content: space-between; gap: 26px; margin-top: 22px; }
+.cardFooter { display: flex; align-items: flex-end; justify-content: space-between; gap: 26px; margin-top: clamp(8px, 1.6svh, 20px); }
 .cardStats { flex: 1; min-width: 0; max-width: 225px; font-size: 11px; font-weight: 550; }
 .progress { height: 5px; overflow: hidden; border-radius: 10px; background: #ffffff38; margin-block: 8px 10px; }
 .progress > div { height: 100%; background: #f3eee1; border-radius: inherit; }

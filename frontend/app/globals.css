@@ -34,18 +34,42 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   /* Mobile-first — simulate phone container */
-  min-height: 100svh;
+  height: 100svh;
+  overflow: hidden;
 }
 
 /* ── Mobile container ─────────────────────────────────────────────────────── */
-/* All screens are designed for ~390px phone width, centered on desktop */
+/* All screens are designed for ~390px phone width, centered on desktop.
+   The shell is exactly one viewport tall and never scrolls as a whole: this is
+   a phone app, not a document. Screens that genuinely have more content than
+   fits scroll inside their own region (.screen-scroll) so the bottom nav and
+   any screen header stay put. */
 .phone-shell {
   max-width: 430px;
   margin-inline: auto;
-  min-height: 100svh;
+  height: 100svh;
+  display: flex;
+  flex-direction: column;
   position: relative;
-  overflow-x: hidden;
+  overflow: hidden;
   background: var(--color-bg);
+}
+
+.phone-shell > main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The one place vertical scrolling is allowed, when content cannot be trimmed
+   to fit. Momentum scrolling stays inside the region on iOS. */
+.screen-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ── RTL: ENFORCED — no ml-/mr-/pl-/pr- allowed ───────────────────────────── */
