@@ -89,3 +89,23 @@ def test_validate_item_strips_options_repeated_in_the_stem():
 def test_fingerprint_matches_reworded_punctuation_only_differences():
     assert gen.fingerprint("What is a habitat?") == gen.fingerprint("what is a HABITAT")
     assert gen.fingerprint("What is a habitat?") != gen.fingerprint("What is an organism?")
+
+
+def test_stream_parses_anthropic_and_openai_event_shapes():
+    anthropic_event = {"type": "content_block_delta", "delta": {"text": "مرحبا"}}
+    assert providers._text_from_event("anthropic", anthropic_event) == "مرحبا"
+    assert providers._text_from_event("anthropic", {"type": "message_stop"}) == ""
+
+    openai_event = {"choices": [{"delta": {"content": "hello"}}]}
+    assert providers._text_from_event("openai", openai_event) == "hello"
+    assert providers._text_from_event("openai", {"choices": [{"delta": {}}]}) == ""
+    assert providers._text_from_event("openai", {"choices": []}) == ""
+
+
+def test_request_marks_streaming_payloads():
+    _, _, payload = providers._request("openai", "sys", [{"role": "user", "content": "hi"}],
+                                       100, "gpt-4o-mini", stream=True)
+    assert payload["stream"] is True
+    _, _, plain = providers._request("openai", "sys", [{"role": "user", "content": "hi"}],
+                                     100, "gpt-4o-mini", stream=False)
+    assert "stream" not in plain
