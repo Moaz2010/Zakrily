@@ -74,31 +74,31 @@ def test_website_path_chat_and_actual_grounding(client, db, science, monkeypatch
     detail = client.get(f"/lessons/{science.id}").json()
     assert detail["lesson"]["id"] == science.id
     assert len(detail["sections"]) == 9
-    monkeypatch.setattr(chat.settings, "groq_api_key", "test-key")
-    provider = MagicMock()
-    provider.post.return_value.json.return_value = {"choices": [{"message": {"content": "Grounded response"}}]}
-    factory = MagicMock()
-    factory.return_value.__enter__.return_value = provider
-    monkeypatch.setattr(chat.httpx, "Client", factory)
+    monkeypatch.setattr(chat.providers.settings, "groq_api_key", "test-key")
+    calls = []
+
+    def fake_complete(provider, system, messages, **kwargs):
+        calls.append({"system": system, "messages": messages})
+        return "Grounded response"
+
+    monkeypatch.setattr(chat.providers, "complete", fake_complete)
     session = client.post("/chat/sessions", json={"lesson_id": science.id, "mode": "science_explain"})
     assert session.status_code == 200
     url = f"/chat/sessions/{session.json()['session_id']}/message"
     response = client.post(url, json={"content": "What is a habitat?"})
     assert response.status_code == 200 and response.json()["reply"] == "Grounded response"
-    prompt = provider.post.call_args.kwargs["json"]
-    assert "The place where a living organism lives" in prompt["messages"][0]["content"]
-    assert "Type: explanation" in prompt["messages"][0]["content"] and "**ANSWER:**" not in prompt["messages"][0]["content"]
+    assert "The place where a living organism lives" in calls[-1]["system"]
+    assert "Type: explanation" in calls[-1]["system"] and "**ANSWER:**" not in calls[-1]["system"]
     client.post(url, json={"content": "Answer question 20"})
-    prompt = provider.post.call_args.kwargs["json"]
-    assert "### Question 20" in prompt["messages"][0]["content"] and "**Options:**" in prompt["messages"][0]["content"]
-    assert "**MODEL ANSWER:**" in prompt["messages"][0]["content"] and "Type: explanation" not in prompt["messages"][0]["content"]
-    assert prompt["messages"][1]["content"] == "What is a habitat?"
+    assert "### Question 20" in calls[-1]["system"] and "**Options:**" in calls[-1]["system"]
+    assert "**MODEL ANSWER:**" in calls[-1]["system"] and "Type: explanation" not in calls[-1]["system"]
+    assert calls[-1]["messages"][0]["content"] == "What is a habitat?"
     client.post(url, json={"content": "Explain habitat"})
-    assert "Type: exercise" not in provider.post.call_args.kwargs["json"]["messages"][0]["content"]
-    count = provider.post.call_count
+    assert "Type: exercise" not in calls[-1]["system"]
+    count = len(calls)
     result = client.post(url, json={"content": "quantum entanglement"})
     assert "مش لاقية" in result.json()["reply"]
-    assert provider.post.call_count == count
+    assert len(calls) == count
     assert client.post(url, json={"content": " "}).status_code == 422
     client.headers["Authorization"] = f"Bearer {create_access_token(str(other.id))}"
     assert client.post(url, json={"content": "Question 1"}).status_code == 404
@@ -107,14 +107,19 @@ def test_website_path_chat_and_actual_grounding(client, db, science, monkeypatch
 
 
 def test_missing_key_and_provider_failure_use_only_retrieved_excerpts(db, science, monkeypatch):
-    monkeypatch.setattr(chat.settings, "groq_api_key", "")
+    # No provider configured at all: fall back to the retrieved excerpts.
+    for key in ("groq_api_key", "anthropic_api_key", "openai_api_key"):
+        monkeypatch.setattr(chat.providers.settings, key, "")
     response = chat.explain(science.id, "Answer question 20", [], db=db)
     assert "مش متاح" in response and "### Question 20" in response
     assert "### Question 21" not in response
-    monkeypatch.setattr(chat.settings, "groq_api_key", "test-key")
-    import httpx
-    factory = MagicMock()
-    factory.return_value.__enter__.return_value.post.side_effect = httpx.ConnectError("offline")
-    monkeypatch.setattr(chat.httpx, "Client", factory)
+
+    # Configured but unreachable: same fallback, never an invented answer.
+    monkeypatch.setattr(chat.providers.settings, "groq_api_key", "test-key")
+
+    def boom(*args, **kwargs):
+        raise chat.providers.ProviderError("offline")
+
+    monkeypatch.setattr(chat.providers, "complete", boom)
     response = chat.explain(science.id, "Answer question 20", [], db=db)
     assert "مش متاح" in response and "### Question 20" in response
