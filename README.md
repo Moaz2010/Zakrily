@@ -1,4 +1,4 @@
-# Zakrely (ذاكريلي)
+# Zakrily (ذاكريلي)
 
 Prototype/MVP for Junior 4 (Prep 1), Unit 1 — English, Math, Science.
 
