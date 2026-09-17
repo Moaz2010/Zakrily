@@ -12,13 +12,14 @@ from scripts.import_english_questions import SOURCE, extract_items, run as impor
 
 def test_source_keeps_skill_tags_and_unique_numbers():
     items = extract_items(SOURCE.read_text(encoding="utf-8"))
-    assert len(items) == 33
-    assert [item["number"] for item in items] == list(range(1, 34))
-    assert {item["skill"] for item in items} == {"memorization", "comprehension", "application", "analysis"}
+    assert len(items) == 24
+    assert [item["number"] for item in items] == list(range(1, 25))
+    # The source labels only these three skills; it has no comprehension exercises.
+    assert {item["skill"] for item in items} == {"memorization", "application", "analysis"}
     assert Counter(item["skill"] for item in items)["memorization"] == 6
     assert items[0]["qtype"] == "mcq" and items[0]["correct_answer"] == "a" and items[0]["skill"] == "application"
     assert items[-1]["source_key"] == "writing" and items[-1]["scored"] is False and items[-1]["skill"] == "application"
-    assert sum(item["qtype"] == "mcq" for item in items) == 27
+    assert sum(item["qtype"] == "mcq" for item in items) == 21
     assert all(item["skill_label"] for item in items)
 
 
@@ -27,14 +28,14 @@ def test_english_activity_resumes_and_targets_weak_skills(db, client, monkeypatc
     import_english()
     import_english()
     lesson = db.query(Lesson).join(Subject).filter(Subject.slug == "english", Lesson.order_index == 1).one()
-    assert db.query(Question).filter_by(lesson_id=lesson.id).count() == 33
+    assert db.query(Question).filter_by(lesson_id=lesson.id).count() == 24
     user = User(name="Learner", email="english-activity@example.com", password_hash="unused")
     db.add(user)
     db.commit()
     client.headers["Authorization"] = f"Bearer {create_access_token(str(user.id))}"
     url = f"/lessons/{lesson.id}/activity"
     initial = client.get(url).json()
-    assert initial["total"] == 33 and initial["scored_total"] == 32
+    assert initial["total"] == 24 and initial["scored_total"] == 23
     assert all(q["skill_tag"] in {"memorization", "comprehension", "application", "analysis"} for q in initial["questions"])
     first = initial["questions"][0]
     assert first["number"] == 1 and first["skill_tag"] == "application" and "a" in first["options"]

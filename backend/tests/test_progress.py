@@ -27,7 +27,9 @@ def learner(db, client):
 def questions(db):
     subject = db.query(Subject).filter(Subject.slug == "english").one()
     lessons = db.query(Lesson).filter(Lesson.subject_id == subject.id).order_by(Lesson.order_index).all()
-    tags = db.query(SkillTag).order_by(SkillTag.id).all()
+    # English quizzes exclude comprehension questions, so this generic progress
+    # fixture cycles the tags that quizzes actually serve.
+    tags = db.query(SkillTag).filter(SkillTag.slug != "comprehension").order_by(SkillTag.id).all()
     result = []
     for lesson in lessons:
         lesson.is_published = True
