@@ -112,3 +112,25 @@ def test_message_can_select_a_model_and_reports_it(client, db, all_lessons, monk
     # A model whose provider has no key configured is refused, not silently swapped.
     assert client.post(url, json={"content": "تاني", "model": "claude-haiku-4-5-20251001"}).status_code == 503
     assert client.post(url, json={"content": "تاني", "model": "not-a-model"}).status_code == 422
+
+
+def test_stream_endpoint_emits_deltas_and_saves_once_complete(client, db, all_lessons, monkeypatch):
+    user = User(name="Streamer", email="stream@example.com", password_hash="unused")
+    db.add(user)
+    db.commit()
+    client.headers["Authorization"] = f"Bearer {create_access_token(str(user.id))}"
+    lesson = db.query(Lesson).join(Subject).filter(Subject.slug == "science", Lesson.order_index == 1).one()
+    monkeypatch.setattr(chat.providers.settings, "anthropic_api_key", "test-key")
+    monkeypatch.setattr(chat.providers, "stream",
+                        lambda *args, **kwargs: iter(["مرحبا ", "يا بطل"]))
+
+    session_id = client.post("/chat/sessions", json={"lesson_id": lesson.id, "mode": "lesson_explain"}).json()["session_id"]
+    response = client.post(f"/chat/sessions/{session_id}/stream", json={"content": "اشرحلي الدرس"})
+    assert response.status_code == 200
+    body = response.text
+    assert '"delta": "مرحبا "' in body or "مرحبا" in body
+    assert '"done": true' in body
+
+    from app.models.chat import ChatMessage as Message, ChatRole as Role
+    saved = db.query(Message).filter_by(session_id=session_id, role=Role.assistant).all()
+    assert len(saved) == 1 and saved[0].content == "مرحبا يا بطل"

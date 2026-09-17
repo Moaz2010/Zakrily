@@ -1,8 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+import json
+
+from fastapi.responses import StreamingResponse
+
 from app.ai_service import providers
-from app.ai_service.chat import converse, explain
+from app.ai_service.chat import converse, explain, explain_stream
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.chat import ChatMode, ChatSession, ChatMessage, ChatRole
@@ -49,9 +53,8 @@ def create_session(payload: ChatSessionCreateRequest, current_user: User = Depen
     return ChatSessionCreateResponse(session_id=session.id)
 
 
-@router.post("/chat/sessions/{session_id}/message", response_model=ChatMessageResponse)
-def send_message(session_id: int, payload: ChatMessageRequest, current_user: User = Depends(get_current_user),
-                 db: Session = Depends(get_db)):
+def _load_turn(session_id: int, payload: ChatMessageRequest, current_user: User, db: Session):
+    """Validate the session, message and requested model; return the turn's context."""
     session = db.query(ChatSession).filter_by(id=session_id, user_id=current_user.id).first()
     if session is None:
         raise HTTPException(404, "Chat session not found")
@@ -62,17 +65,61 @@ def send_message(session_id: int, payload: ChatMessageRequest, current_user: Use
     message_query = db.query(ChatMessage).filter_by(session_id=session.id).order_by(ChatMessage.id.desc())
     messages = (message_query.limit(10) if session.mode == ChatMode.science_explain else message_query).all()
     history = [{"role": m.role.value, "content": m.content} for m in reversed(messages)]
+
+    # An explicit model implies its provider, so the picker only has to send one field.
+    requested = payload.provider.value if payload.provider else None
+    if payload.model:
+        owner = providers.provider_of(payload.model)
+        if owner is None:
+            raise HTTPException(422, "Unknown model")
+        requested = owner
+    chosen = providers.resolve(requested)
+    if chosen is not None and payload.model and providers.provider_of(payload.model) != chosen:
+        raise HTTPException(503, "That model's provider is not configured on the server")
+    return session, content, history, requested, chosen
+
+
+@router.post("/chat/sessions/{session_id}/stream")
+def stream_message(session_id: int, payload: ChatMessageRequest,
+                   current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Server-sent events, so the reply types out instead of appearing at once."""
+    session, content, history, requested, chosen = _load_turn(session_id, payload, current_user, db)
+    if session.mode != ChatMode.science_explain:
+        raise HTTPException(422, "Streaming is available for lesson explanations")
+
+    def events():
+        collected = []
+        try:
+            for piece in explain_stream(session.lesson_id, content, history, db=db,
+                                        provider=requested, model=payload.model):
+                collected.append(piece)
+                yield f"data: {json.dumps({'delta': piece}, ensure_ascii=False)}\n\n"
+        except Exception:
+            if not collected:
+                yield f"data: {json.dumps({'error': True}, ensure_ascii=False)}\n\n"
+                return
+        reply = "".join(collected).strip()
+        if reply:
+            # Persist only once the turn completed, so an aborted stream does
+            # not leave a half-written reply in the student's history.
+            db.add_all([
+                ChatMessage(session_id=session.id, role=ChatRole.user, content=content),
+                ChatMessage(session_id=session.id, role=ChatRole.assistant, content=reply),
+            ])
+            db.commit()
+        final = {"done": True, "provider": chosen,
+                 "model": payload.model or (providers.model_for(chosen) if chosen else None)}
+        yield f"data: {json.dumps(final, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(events(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@router.post("/chat/sessions/{session_id}/message", response_model=ChatMessageResponse)
+def send_message(session_id: int, payload: ChatMessageRequest, current_user: User = Depends(get_current_user),
+                 db: Session = Depends(get_db)):
+    session, content, history, requested, chosen = _load_turn(session_id, payload, current_user, db)
     if session.mode == ChatMode.science_explain:
-        # An explicit model implies its provider, so the picker only has to send one field.
-        requested = payload.provider.value if payload.provider else None
-        if payload.model:
-            owner = providers.provider_of(payload.model)
-            if owner is None:
-                raise HTTPException(422, "Unknown model")
-            requested = owner
-        chosen = providers.resolve(requested)
-        if chosen is not None and payload.model and providers.provider_of(payload.model) != chosen:
-            raise HTTPException(503, "That model's provider is not configured on the server")
         result = ChatMessageResponse(
             reply=explain(session.lesson_id, content, history, db=db,
                           provider=requested, model=payload.model),

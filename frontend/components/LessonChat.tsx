@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { chatApi } from "@/lib/api";
 import type { ChatModelOption } from "@/lib/api";
+import { playMessage, playTap } from "@/lib/sounds";
 import styles from "./LessonChat.module.css";
 
 const COLORS: Record<string, string> = { science: "#346a5e", math: "#854f4a", english: "#426b8a" };
@@ -18,6 +19,7 @@ export function LessonChat({ lessonId, subject, lessonTitle }: {
   const [error, setError] = useState("");
   const [models, setModels] = useState<ChatModelOption[]>([]);
   const [model, setModel] = useState("");
+  const [streaming, setStreaming] = useState(false);
   const session = useRef<number | null>(null);
   const sending = useRef(false);
   const input = useRef<HTMLInputElement>(null);
@@ -55,11 +57,34 @@ export function LessonChat({ lessonId, subject, lessonTitle }: {
     setError("");
     setQuestion("");
     setMessages((previous) => [...previous, { role: "user", content }]);
+    playTap();
     try {
       const id = session.current ?? (await chatApi.createSession({ lesson_id: lessonId, mode: "lesson_explain" })).session_id;
       session.current = id;
-      const response = await chatApi.sendMessage(id, { content, ...(model ? { model } : {}) });
-      if (mounted.current) setMessages((previous) => [...previous, { role: "assistant", content: response.reply }]);
+
+      let streamed = "";
+      let opened = false;
+      await chatApi.streamMessage(id, { content, ...(model ? { model } : {}) }, (delta) => {
+        if (!mounted.current) return;
+        streamed += delta;
+        if (!opened) {
+          // First token: turn the thinking indicator into a live message.
+          opened = true;
+          playMessage();
+          setBusy(false);
+          setStreaming(true);
+          setMessages((previous) => [...previous, { role: "assistant", content: streamed }]);
+        } else {
+          setMessages((previous) => {
+            const next = [...previous];
+            next[next.length - 1] = { role: "assistant", content: streamed };
+            return next;
+          });
+        }
+      });
+      if (!opened && mounted.current) {
+        throw new Error("empty stream");
+      }
     } catch {
       if (mounted.current) {
         setMessages((previous) => previous.slice(0, -1));
@@ -68,7 +93,10 @@ export function LessonChat({ lessonId, subject, lessonTitle }: {
       }
     } finally {
       sending.current = false;
-      if (mounted.current) setBusy(false);
+      if (mounted.current) {
+        setBusy(false);
+        setStreaming(false);
+      }
     }
   }
 
@@ -104,7 +132,7 @@ export function LessonChat({ lessonId, subject, lessonTitle }: {
           <p>أنا نُوّارة! اسألني عن الدرس ده وهشرحهولك بالمصري بطريقة بسيطة.</p>
           <div className={styles.suggestions}>{SUGGESTIONS.map((text) => <button key={text} type="button" disabled={busy} onClick={() => void send(text)}>{text}<span aria-hidden="true">↗</span></button>)}</div>
         </div>}
-        {messages.map((message, index) => <div key={index} className={`${styles.message} ${message.role === "user" ? styles.user : styles.assistant}`}>
+        {messages.map((message, index) => <div key={index} className={`${styles.message} ${message.role === "user" ? styles.user : styles.assistant} ${streaming && index === messages.length - 1 && message.role === "assistant" ? styles.streaming : ""}`}>
           <span className={styles.speaker}>{message.role === "user" ? "أنت" : "نُوّارة ✨"}</span>
           {message.role === "assistant" ? <ChatReply text={message.content} /> : <p dir="auto">{message.content}</p>}
         </div>)}

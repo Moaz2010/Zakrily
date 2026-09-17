@@ -4,6 +4,8 @@ Callers pass a provider name and get plain text back. Anthropic takes the
 system prompt as a top-level field rather than a message, which is the only
 shape difference that leaks into this module.
 """
+import json
+
 import httpx
 
 from app.core.config import settings
@@ -68,14 +70,9 @@ def model_for(provider: str) -> str:
             GROQ: settings.groq_model}[provider]
 
 
-def complete(provider: str, system: str, messages: list[dict], *, max_tokens: int = 2400,
-             timeout: float = 45.0, model: str | None = None) -> str:
-    """Send a chat completion and return the assistant's text.
-
-    `messages` is the OpenAI-style history (user/assistant turns only); the
-    system prompt is passed separately because Anthropic requires it that way.
-    `model` overrides the provider's configured default.
-    """
+def _request(provider: str, system: str, messages: list[dict], max_tokens: int,
+             model: str | None, stream: bool):
+    """Build the (url, headers, payload) for one chat call."""
     if provider == ANTHROPIC:
         url = "https://api.anthropic.com/v1/messages"
         headers = {"x-api-key": settings.anthropic_api_key,
@@ -100,7 +97,60 @@ def complete(provider: str, system: str, messages: list[dict], *, max_tokens: in
             payload["reasoning_effort"] = "low"
     else:
         raise ProviderError(f"Unknown provider {provider!r}")
+    if stream:
+        payload["stream"] = True
+    return url, headers, payload
 
+
+def _text_from_event(provider: str, data: dict) -> str:
+    """Pull the incremental text out of one streamed event."""
+    if provider == ANTHROPIC:
+        if data.get("type") == "content_block_delta":
+            return data.get("delta", {}).get("text", "") or ""
+        return ""
+    choices = data.get("choices") or []
+    if not choices:
+        return ""
+    return choices[0].get("delta", {}).get("content") or ""
+
+
+def stream(provider: str, system: str, messages: list[dict], *, max_tokens: int = 2400,
+           timeout: float = 90.0, model: str | None = None):
+    """Yield the reply in chunks as the model produces it.
+
+    Both API families use server-sent events, differing only in the event shape,
+    which `_text_from_event` absorbs.
+    """
+    url, headers, payload = _request(provider, system, messages, max_tokens, model, stream=True)
+    try:
+        with httpx.Client(timeout=timeout) as client:
+            with client.stream("POST", url, headers=headers, json=payload) as response:
+                response.raise_for_status()
+                for line in response.iter_lines():
+                    if not line or not line.startswith("data:"):
+                        continue
+                    blob = line[5:].strip()
+                    if not blob or blob == "[DONE]":
+                        continue
+                    try:
+                        piece = _text_from_event(provider, json.loads(blob))
+                    except ValueError:
+                        continue
+                    if piece:
+                        yield piece
+    except httpx.HTTPError as exc:
+        raise ProviderError(str(exc)) from exc
+
+
+def complete(provider: str, system: str, messages: list[dict], *, max_tokens: int = 2400,
+             timeout: float = 45.0, model: str | None = None) -> str:
+    """Send a chat completion and return the assistant's text.
+
+    `messages` is the OpenAI-style history (user/assistant turns only); the
+    system prompt is passed separately because Anthropic requires it that way.
+    `model` overrides the provider's configured default.
+    """
+    url, headers, payload = _request(provider, system, messages, max_tokens, model, stream=False)
     try:
         with httpx.Client(timeout=timeout) as client:
             response = client.post(url, headers=headers, json=payload)

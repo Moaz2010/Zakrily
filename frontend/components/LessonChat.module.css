@@ -44,6 +44,15 @@
 .assistant { margin-right: auto; background: white; border: 1px solid #e1e7df; border-bottom-left-radius: 4px; }
 .assistant .speaker, .assistant .reply h3, .assistant .reply h4, .assistant .reply strong { color: var(--chat-color); }
 .thinking { font-size: 12px; color: var(--chat-color); padding: 6px; }
+/* Caret on the last assistant bubble while tokens are still arriving. */
+.streaming .reply > *:last-child::after {
+  content: "▍";
+  margin-inline-start: 2px;
+  color: var(--chat-color);
+  animation: caret 1s steps(2) infinite;
+}
+@keyframes caret { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .streaming .reply > *:last-child::after { animation: none; } }
 .thinking span { margin-right: 8px; letter-spacing: 3px; }
 .composer { padding: 12px; background: white; border-top: 1px solid #e6e9e2; }
 .inputRow { display: flex; gap: 8px; }
