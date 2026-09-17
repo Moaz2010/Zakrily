@@ -190,3 +190,14 @@ def test_cors_never_returns_a_wildcard_origin_with_credentials(client):
     assert posted.status_code == 200
     # Must echo the origin, not "*", and must match the preflight.
     assert posted.headers.get("access-control-allow-origin") == origin
+
+
+def test_api_answers_under_the_deployment_prefix_as_well_as_the_root(client):
+    """Deployed as a Vercel service, the request keeps its original
+    /api/backend/... path, so the same routes must answer under that prefix."""
+    assert client.get("/health").json() == {"status": "ok"}
+    assert client.get("/api/backend/health").json() == {"status": "ok"}
+    # Auth works through the prefix too, not just the trivial health route.
+    body = {"name": "Prefixed", "email": "prefixed@example.com", "password": "testpass123"}
+    assert client.post("/api/backend/auth/register", json=body).status_code == 200
+    assert client.post("/api/backend/auth/login", json=body).status_code == 200

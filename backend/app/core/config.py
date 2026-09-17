@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     # frontend is same-origin behind /api/backend, so this stays empty there.
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
+    # Path the API is served under when deployed as a Vercel service. Routes are
+    # registered at the root AND under this prefix, so the API answers whether or
+    # not the platform strips the prefix before the app sees the request.
+    api_prefix: str = "/api/backend"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
