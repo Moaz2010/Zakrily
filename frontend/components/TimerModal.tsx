@@ -5,10 +5,12 @@ import { useTimer } from "@/lib/timer-context";
 import { angleDelta, clampMinutes, DEGREES_PER_MINUTE, MAX_MINUTES, MIN_MINUTES, MINUTE_STEP } from "@/lib/study-timer";
 import { StudentHeader } from "./StudentHeader";
 import { BottomNav } from "./BottomNav";
+import { TimerCelebration } from "./TimerCelebration";
 import styles from "./TimerModal.module.css";
 
 export function TimerModal() {
   const { state } = useTimer();
+  if (state === "done") return <TimerCelebration />;
   return state === "selecting" ? <TimerPicker /> : null;
 }
 

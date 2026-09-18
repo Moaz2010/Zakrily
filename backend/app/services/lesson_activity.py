@@ -10,6 +10,7 @@ from app.models.user import User
 from app.schemas.activity import ActivityQuestion, ActivityState
 from app.schemas.quiz import QuestionResult, SkillBreakdownItem
 from app.services.grading import approved_questions, public_question, save_answers
+from app.services.math_question_order import mixed_math_questions
 from app.services.progress import accessible_lesson
 from app.services.scoring import has_sufficient_data, is_passing
 
@@ -47,7 +48,7 @@ def evidence(db, user_id, bank, since=0):
 
 
 def state(db, user_id, lesson_id, practice=False):
-    _, bank, progress = load(db, user_id, lesson_id)
+    lesson, bank, progress = load(db, user_id, lesson_id)
     saved = (progress.learning_state or {}) if progress else {}
     latest, first = evidence(db, user_id, bank, saved.get("review_after", 0))
     saved_reflections = saved.get("review_reflections" if saved.get("review_active") else "reflections", {})
@@ -62,18 +63,23 @@ def state(db, user_id, lesson_id, practice=False):
                                 insufficient_data=not has_sufficient_data(t)) for tag, (c, t) in totals.items()]
     minimum = min((s.accuracy for s in skills if s.accuracy < 1), default=None)
     weakest = [s.skill_tag.value for s in skills if s.accuracy == minimum]
+    ordered_bank = bank
+    if practice:
+        ordered_bank = [(q, tag) for q, tag in bank
+                        if q.id in latest and not latest[q.id].is_correct and tag.slug.value in weakest]
+    if db.get(Subject, lesson.subject_id).slug.value == "math":
+        # Mix the full lesson before removing answered questions, so resuming
+        # keeps the remaining sequence. Practice mixes only its eligible items.
+        ordered_bank = mixed_math_questions(
+            ordered_bank, f"{user_id}:{lesson_id}:{saved.get('review_after', 0)}")
     candidates = []
-    for q, tag in bank:
-        if practice:
-            if q.id not in latest or latest[q.id].is_correct or tag.slug.value not in weakest:
-                continue
-        elif q.id in first or str(q.id) in reflections:
+    for q, tag in ordered_bank:
+        if not practice and (q.id in first or str(q.id) in reflections):
             continue
         candidates.append(ActivityQuestion(**public_question(q, tag).model_dump(),
                                           number=q.grading_data["number"], scored=q.grading_data.get("scored", True),
                                           part=q.grading_data.get("part", ""),
                                           previous_attempt_id=latest[q.id].id if q.id in latest else 0))
-    candidates.sort(key=lambda q: q.number)
     correct = sum(s.correct for s in skills)
     attempted = sum(s.total for s in skills)
     return ActivityState(questions=candidates, total=len(bank), answered=len(first) + len(reflections),

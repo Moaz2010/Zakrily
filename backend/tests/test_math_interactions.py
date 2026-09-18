@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.orm import sessionmaker
 
 from app.core.security import create_access_token
-from app.models.attempt import Attempt, LessonProgress, LessonStatus
+from app.models.attempt import Attempt, AttemptContext, LessonProgress, LessonStatus
 from app.models.lesson import Lesson
 from app.models.question import Question, ReviewStatus
 from app.models.subject import Subject
@@ -137,6 +137,60 @@ def test_interactive_submission_drafts_and_import_repeatability(client, db, math
     assert ids == {row.grading_data["source_key"] + f"-{row.lesson_id}": row.id for row in db.query(Question)}
     assert db.query(Attempt).filter_by(user_id=user.id, question_id=q.id).count() == 1
     assert client.get(prefix).json()["answered"] == 1
+
+
+def test_math_activity_mixes_types_and_resumes_in_the_same_order(client, db, math_bank):
+    sign_in(client, db)
+    lesson_id = item(db, 1, "q1a").lesson_id
+    prefix = f"/lessons/{lesson_id}/activity"
+    initial = client.get(prefix).json()
+    questions = initial["questions"]
+    ids = [q["id"] for q in questions]
+    kinds = [(q.get("interaction") or {}).get("kind", q["qtype"]) for q in questions]
+    counts = Counter(kinds)
+    repeats = sum(a == b for a, b in zip(kinds, kinds[1:]))
+    assert repeats == max(0, 2 * max(counts.values()) - len(kinds) - 1)
+    assert ids != sorted(ids)
+    assert [q["id"] for q in client.get(prefix).json()["questions"]] == ids
+
+    draft = {"draft": {"question_id": ids[0], "answer": "saved draft"}}
+    saved = client.put(prefix + "/progress", json=draft).json()
+    assert saved["drafts"][str(ids[0])] == "saved draft"
+    assert [q["id"] for q in saved["questions"]] == ids
+    q = db.get(Question, ids[0])
+    rule = q.grading_data.get("math_rule")
+    answer = json.dumps(rule["expected"]) if rule else q.correct_answer
+    submitted = client.post(prefix + "/answer", json={"question_id": q.id, "answer": answer})
+    assert submitted.status_code == 200, submitted.text
+    assert submitted.json()["answered"] == 1
+    assert [q["id"] for q in submitted.json()["questions"]] == ids[1:]
+    assert [q["id"] for q in client.get(prefix).json()["questions"]] == ids[1:]
+
+
+def test_math_targeted_practice_mixes_only_eligible_mistakes(client, db, math_bank):
+    user = sign_in(client, db)
+    lesson_id = item(db, 1, "q1a").lesson_id
+    selected = []
+    counts = Counter()
+    for q in math_bank:
+        if q.lesson_id != lesson_id or q.review_status != ReviewStatus.approved or not q.grading_data.get("scored", True):
+            continue
+        kind = (q.grading_data.get("interaction") or {}).get("kind", q.qtype.value)
+        if counts[kind] < 2:
+            selected.append(q)
+            counts[kind] += 1
+            db.add(Attempt(user_id=user.id, question_id=q.id, given_answer="wrong", is_correct=False,
+                           context=AttemptContext.lesson_quiz))
+    db.commit()
+    prefix = f"/lessons/{lesson_id}/activity?practice=true"
+    response = client.get(prefix)
+    assert response.status_code == 200, response.text
+    questions = response.json()["questions"]
+    assert {q["id"] for q in questions} == {q.id for q in selected}
+    kinds = [(q.get("interaction") or {}).get("kind", q["qtype"]) for q in questions]
+    assert len(set(kinds)) >= 3
+    assert all(a != b for a, b in zip(kinds, kinds[1:]))
+    assert client.get(prefix).json()["questions"] == questions
 
 
 @pytest.mark.parametrize("text,value", [("Ten", 10), ("Hundred Thousand", 100000), ("Seven hundred million, eighty-four", 700000084),
