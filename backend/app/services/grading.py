@@ -1,6 +1,5 @@
 """Grade approved questions on the server and save the evidence for statistics."""
 from collections import defaultdict
-from decimal import Decimal, InvalidOperation
 import unicodedata
 import re
 
@@ -13,6 +12,7 @@ from app.models.question import Question, QuestionType, ReviewStatus, SkillTag, 
 from app.schemas.quiz import QuestionPublic, QuestionResult, SkillBreakdownItem
 from app.services.scoring import has_sufficient_data
 from app.services.answer_ideas import matches_ideas
+from app.services.math_interactions import grade_interaction, numeric_value
 
 
 def approved_questions(db: Session, lesson_id: int | None = None, subject_id: int | None = None, include_unscored: bool = False, exclude_comprehension: bool = False):
@@ -31,7 +31,8 @@ def approved_questions(db: Session, lesson_id: int | None = None, subject_id: in
 
 def public_question(question, tag):
     return QuestionPublic(id=question.id, lesson_id=question.lesson_id, skill_tag=tag.slug.value,
-                          qtype=question.qtype.value, body=question.body, options=question.options)
+                          qtype=question.qtype.value, body=question.body, options=question.options,
+                          interaction=(question.grading_data or {}).get("interaction"))
 
 
 def answer_matches(question: Question, answer: str) -> bool:
@@ -39,6 +40,11 @@ def answer_matches(question: Question, answer: str) -> bool:
         return " ".join(unicodedata.normalize("NFKC", value).casefold().split())
     if not answer.strip():
         return False
+    if (question.grading_data or {}).get("interaction"):
+        return grade_interaction(question.grading_data, answer)
+    if question.qtype == QuestionType.numeric:
+        actual, expected = numeric_value(answer), numeric_value(question.correct_answer)
+        return actual is not None and expected is not None and actual == expected
     if question.qtype == QuestionType.short_answer:
         data = question.grading_data or {}
         candidates = [question.correct_answer, *data.get("accepted", [])]
@@ -46,12 +52,6 @@ def answer_matches(question: Question, answer: str) -> bool:
     if (question.grading_data or {}).get("accepted"):
         normalized = lambda value: " ".join(re.findall(r"\w+", normalize(value)))
         return normalized(answer) in {normalized(value) for value in question.grading_data["accepted"]}
-    if question.qtype == QuestionType.numeric:
-        try:
-            actual, expected = Decimal(answer.strip()), Decimal(question.correct_answer.strip())
-            return actual.is_finite() and expected.is_finite() and actual == expected
-        except InvalidOperation:
-            return False
     return normalize(answer) == normalize(question.correct_answer)
 
 

@@ -58,6 +58,7 @@ export default function LearningPathPage() {
   }, [slug, retry]);
 
   const current = nodes.find((node) => node.status === "unlocked");
+  const activityLesson = current ?? [...nodes].reverse().find((node) => node.status === "completed");
   const completed = nodes.filter((node) => node.status === "completed").length;
   const progress = nodes.length ? Math.round(nodes.reduce((total, node) => total + (node.progress ?? (node.status === "completed" ? 1 : 0)), 0) / nodes.length * 100) : 0;
   const height = Math.max(540, nodes.length * 180 + 80);
@@ -107,7 +108,7 @@ export default function LearningPathPage() {
 
       {loading ? <div className={styles.message} role="status">جاري تحميل الدروس…</div> : error ? (
         <div className={styles.message} role="alert"><p>تعذر تحميل الدروس. حاول مرة أخرى.</p><button onClick={() => setRetry((n) => n + 1)}>إعادة المحاولة</button></div>
-      ) : !nodes.length ? <div className={styles.message}>لا توجد دروس متاحة بعد.</div> : mode === "practice" ? <TrainingActivities subject={slug} lessonId={(current ?? nodes[nodes.length - 1]).lesson_id} lessonActivity={slug === "science" || (slug === "english" && (current ?? nodes[nodes.length - 1]).order === 1)} /> : <>
+      ) : !nodes.length ? <div className={styles.message}>لا توجد دروس متاحة بعد.</div> : mode === "practice" ? (activityLesson ? <TrainingActivities subject={slug} lessonId={activityLesson.lesson_id} lessonActivity={slug === "math" || slug === "science" || (slug === "english" && activityLesson.order === 1)} /> : <div className={styles.message}>أكمل الدرس السابق لفتح التدريبات.</div>) : <>
         <div ref={viewport} className={styles.viewport} tabIndex={0} role="region" aria-label="مسار الدروس — مرر لأعلى لعرض الدروس التالية">
           <div className={styles.map} style={{ height }}>
             <Leaves className={styles.leavesRight} /><Leaves className={styles.leavesLeft} />

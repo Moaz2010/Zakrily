@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { lessonsApi, type LessonSectionOut } from "@/lib/api";
 import { CardDoodle } from "./CardDoodle";
 import { EnglishVoiceTutor } from "./EnglishVoiceTutor";
-import { MathChecker } from "./MathChecker";
 import { useLearner } from "@/lib/learner-context";
 import styles from "./TrainingActivities.module.css";
 import feedbackStyles from "./StudySession.module.css";
@@ -102,7 +101,13 @@ export function TrainingActivities({
           </h3>
           <Arrow />
         </Link>
-        <button
+        {subject === "math" ? (
+          <Link href={`${base}/corrector`} className={`${styles.card} ${styles.flash}`} dir="rtl">
+            <Pattern />
+            <h3>مصحح<br />رياضي</h3>
+            <Arrow />
+          </Link>
+        ) : <button
           type="button"
           onClick={() => setFlashcards(true)}
           className={`${styles.card} ${styles.flash}`}
@@ -131,10 +136,9 @@ export function TrainingActivities({
             )}
           </h3>
           <Arrow />
-        </button>
+        </button>}
       </div>
       {flashcards && subject === "english" && <EnglishVoiceTutor lessonId={lessonId} onClose={() => setFlashcards(false)} />}
-      {flashcards && subject === "math" && <MathChecker lessonId={lessonId} onClose={() => setFlashcards(false)} />}
       {flashcards && subject === "science" && (
         <Flashcards
           lessonId={lessonId}

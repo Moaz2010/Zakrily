@@ -1,0 +1,109 @@
+.wrapper {
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.nav {
+  --nav-surface: #2e3034;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  width: calc(100% - 24px);
+  max-width: 398px;
+  height: 68px;
+  pointer-events: auto;
+}
+
+/* A real cutout lets the page show through the gap around the raised icon. */
+.nav::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 18px;
+  background: var(--nav-surface);
+  -webkit-mask-image: radial-gradient(circle 32px at var(--active-x) 0, transparent 31px, #000 32px);
+  mask-image: radial-gradient(circle 32px at var(--active-x) 0, transparent 31px, #000 32px);
+}
+
+.tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  height: 68px;
+  color: #b9bbbd;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  transform: translateY(2px);
+  transition: transform 260ms cubic-bezier(.2, .8, .2, 1), background-color 180ms ease, color 180ms ease;
+}
+
+.icon svg { width: 23px; height: 23px; }
+.tab:nth-child(4) .icon svg { width: 30px; height: 28px; }
+
+.label {
+  position: absolute;
+  bottom: 12px;
+  max-width: 100%;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: color 180ms ease;
+}
+
+.active { color: #f8f8f4; }
+.active .icon {
+  background: var(--nav-surface);
+  color: #faf5e4;
+  transform: translateY(-25px);
+}
+.active .icon svg { width: 25px; height: 25px; }
+.tab:hover { color: #faf5e4; }
+
+.timerSlot { display: grid; place-items: center; min-width: 0; }
+.timer {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border: 1px solid #e2e3e1;
+  border-radius: 50%;
+  background: #f8f9f7;
+  color: #16191b;
+  cursor: pointer;
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+.timer svg { width: 32px; height: 32px; transform: translateX(-2px); }
+.timer:hover { background: #fff; }
+.timer:active { transform: scale(.94); }
+.running { width: 62px; height: 46px; border-radius: 24px; border-color: #ffffff35; background: #2d8a6a; color: white; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.running:hover { background: #24795c; }
+.tab:focus-visible { outline: none; }
+.tab:focus-visible .icon, .timer:focus-visible { outline: 3px solid #e6b780; outline-offset: 3px; }
+
+@media (max-width: 350px) {
+  .nav { width: calc(100% - 20px); }
+  .label { font-size: 9px; }
+  .running { width: 56px; font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .icon, .label, .timer { transition: none; }
+}

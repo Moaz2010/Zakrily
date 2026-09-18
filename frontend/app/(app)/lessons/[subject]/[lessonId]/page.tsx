@@ -11,6 +11,7 @@ import { ScienceLearn } from "@/components/ScienceLearn";
 import { EnglishLearn } from "@/components/EnglishLearn";
 import { MathLearn } from "@/components/MathLearn";
 import { MathLearn2 } from "@/components/MathLearn2";
+import { LessonQuestions } from "@/components/LessonQuestions";
 import { GenericLearn } from "@/components/GenericLearn";
 import styles from "./lesson.module.css";
 
@@ -19,7 +20,7 @@ const LABELS: Record<string, string> = { science: "علوم", math: "رياضي�
 
 export default function LessonDetailPage() {
   const { subject, lessonId } = useParams<{ subject: string; lessonId: string }>();
-  const [mode, setMode] = useState<"lesson" | "practice">("lesson");
+  const [mode, setMode] = useState<"lesson" | "practice" | "questions">("lesson");
   const [detail, setDetail] = useState<LessonDetailOut | null>(null);
   const [nodes, setNodes] = useState<PathNodeOut[]>([]);
   const [failed, setFailed] = useState(false);
@@ -55,6 +56,7 @@ export default function LessonDetailPage() {
         {lesson.status !== "locked" && (
           <div className={styles.tabs} role="group" aria-label="نوع النشاط">
             <button onClick={() => setMode("lesson")} aria-pressed={mode === "lesson"}>📖 شرح</button>
+            {subject === "math" && <button onClick={() => setMode("questions")} aria-pressed={mode === "questions"}>أسئلة</button>}
             <button onClick={() => setMode("practice")} aria-pressed={mode === "practice"}>✎ تدريبات</button>
           </div>
         )}
@@ -70,8 +72,10 @@ export default function LessonDetailPage() {
             <p>أكمل الدرس السابق لفتح هذا الدرس.</p>
             <Link href={`/lessons/${subject}`}>العودة لمسار التعلم</Link>
           </div>
+        ) : mode === "questions" ? (
+          <LessonQuestions key={lesson.lesson_id} lessonId={lesson.lesson_id} subject={subject} />
         ) : mode === "practice" ? (
-          <TrainingActivities subject={subject} lessonId={lesson.lesson_id} lessonActivity={subject === "science" || (subject === "english" && lesson.order === 1)} />
+          <TrainingActivities subject={subject} lessonId={lesson.lesson_id} lessonActivity={subject === "math" || subject === "science" || (subject === "english" && lesson.order === 1)} />
         ) : subject === "science" && detail.sections.length > 0 ? (
           <ScienceLearn key={`learn-${lesson.lesson_id}`} sections={detail.sections} lessonId={lesson.lesson_id} onProgress={() => { subjectsApi.path(subject).then(setNodes).catch(() => {}); }} onCompletePractice={() => setMode("practice")} />
         ) : subject === "english" && lesson.order === 1 ? (

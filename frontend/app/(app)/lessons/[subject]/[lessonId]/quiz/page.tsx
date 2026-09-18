@@ -13,7 +13,7 @@ import styles from "@/components/StudySession.module.css";
 
 export default function QuizPage() {
   const params = useParams();
-  return params.subject === "science" || params.subject === "english"
+  return params.subject === "science" || params.subject === "english" || params.subject === "math"
     ? <ScienceActivityRoute subject={params.subject as string} lessonId={Number(params.lessonId)} practice={false} fallback={<LegacyQuizPage />} />
     : <LegacyQuizPage />;
 }

@@ -233,6 +233,17 @@ export const mathApi = {
       body: form,
     });
   },
+  tutorQuestion: () =>
+    apiFetch<{ question: string; model: string }>("/math/tutor/question", { method: "POST" }),
+  tutorFeedback: (image: File, question: string) => {
+    const form = new FormData();
+    form.append("image", image);
+    form.append("question", question);
+    return apiFetch<{ feedback: string; model: string }>("/math/tutor/feedback", {
+      method: "POST",
+      body: form,
+    });
+  },
 };
 
 export type VoiceReply = { session_id: number; reply: string; transcript: string; audio: string[]; audio_error: string | null; done: boolean };

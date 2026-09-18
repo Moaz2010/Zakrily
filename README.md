@@ -115,6 +115,7 @@ python -m scripts.seed
 python -m scripts.ingest --all
 python -m scripts.import_science_questions
 python -m scripts.import_english_questions
+python -m scripts.import_math_questions
 ```
 
 This ingests all 16 prepared Markdown sources under `content/<subject>/unit 1/`,
@@ -132,6 +133,18 @@ unscored reflection because the supplied source does not give a supported answer
 Short factual answers accept listed variants; longer explanations use choices based
 on the source answer, avoiding unreliable exact-sentence grading. Both defensible
 choices for source question 20 are accepted.
+
+The Math import turns the eight supplied Unit 1 worksheets into 329 published
+tasks (326 scored and 3 reflections), including 187 structured activities:
+digit markers, place-value tiles, number/phrase ordering, comparison signs,
+rounding number lines, and mathematical input fields. One question with missing
+source underlines is held for review. All worksheet parts a–z are preserved.
+The **أسئلة** tab, **اختبار**, and **تدريب ذكي** share saved answers and drafts.
+Drag activities also support tap-to-place and keyboard activation. Structured
+answers are graded on the backend; answer keys are excluded from public metadata.
+Math lessons unlock sequentially beyond Lesson 2. Rerun the import after deploying
+these changes to another database; it preserves question IDs and attempt history.
+See [the interaction plan](docs/math-interactions.md) for the source mapping.
 
 The lesson Questions tab and its quiz/practice links use the same authenticated
 activity API. Each checked answer is saved immediately; returning resumes unanswered
@@ -155,6 +168,17 @@ Set `GROQ_API_KEY` in `backend/.env` for generated explanations;
 `GROQ_MODEL` defaults to `openai/gpt-oss-120b`. Restart the backend after changing
 environment settings. The shared `app/ai_service/chat.py` uses Groq's
 [chat completions API](https://console.groq.com/docs/api-reference).
+
+The Grade 4 Math practice chat also uses `GROQ_API_KEY`, but pins its question
+generation and handwritten-photo feedback to `qwen/qwen3.8-27b`. Its image
+requests use Groq's OpenAI-compatible `image_url` payload; the key stays on the
+backend and is never sent to the browser.
+
+Open the photo corrector from the Math lesson's **مصحح رياضي** card;
+**تدريب ذكي** keeps the regular practice questions. The corrector retrieves
+published Math Unit 1–2 content, excludes retired chunks, and re-embeds older
+index versions in memory with the current model. Existing ingested content
+therefore remains usable without changing lesson publication or stored vectors.
 
 For voice/TTS support, create a Gemini API key in Google AI Studio, then add it to
 `backend/.env` as `GEMINI_API_KEY`. You can optionally set `GEMINI_TTS_MODEL` and

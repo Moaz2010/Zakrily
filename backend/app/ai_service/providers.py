@@ -71,7 +71,7 @@ def model_for(provider: str) -> str:
 
 
 def _request(provider: str, system: str, messages: list[dict], max_tokens: int,
-             model: str | None, stream: bool):
+             model: str | None, stream: bool, reasoning_effort: str | None = None):
     """Build the (url, headers, payload) for one chat call."""
     if provider == ANTHROPIC:
         url = "https://api.anthropic.com/v1/messages"
@@ -94,7 +94,7 @@ def _request(provider: str, system: str, messages: list[dict], max_tokens: int,
             payload["max_tokens"] = max_tokens
         else:
             payload["max_completion_tokens"] = max_tokens
-            payload["reasoning_effort"] = "low"
+            payload["reasoning_effort"] = reasoning_effort or "low"
     else:
         raise ProviderError(f"Unknown provider {provider!r}")
     if stream:
@@ -143,14 +143,16 @@ def stream(provider: str, system: str, messages: list[dict], *, max_tokens: int 
 
 
 def complete(provider: str, system: str, messages: list[dict], *, max_tokens: int = 2400,
-             timeout: float = 45.0, model: str | None = None) -> str:
+             timeout: float = 45.0, model: str | None = None,
+             reasoning_effort: str | None = None) -> str:
     """Send a chat completion and return the assistant's text.
 
     `messages` is the OpenAI-style history (user/assistant turns only); the
     system prompt is passed separately because Anthropic requires it that way.
     `model` overrides the provider's configured default.
     """
-    url, headers, payload = _request(provider, system, messages, max_tokens, model, stream=False)
+    url, headers, payload = _request(provider, system, messages, max_tokens, model,
+                                     stream=False, reasoning_effort=reasoning_effort)
     try:
         with httpx.Client(timeout=timeout) as client:
             response = client.post(url, headers=headers, json=payload)

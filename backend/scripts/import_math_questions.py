@@ -6,32 +6,29 @@ Run after ingestion:  python -m scripts.import_math_questions          (all less
 Source and RAG chunks are never changed. Question IDs and prior attempts
 survive reruns, because each question is keyed to the chunk it came from.
 
-Grading policy, in order of preference:
-1. The source already lists Options -> multiple choice, graded on the letter.
-2. The answer is a single number -> numeric, graded by decimal comparison.
-3. The answer is one short phrase -> short answer, with accepted variants.
-4. Anything else (multi-part answers like "a. 4 b. 6", prose) -> saved as an
-   unscored practice item. It still shows the model answer, but it does not
-   feed accuracy statistics, because free-text grading cannot judge it fairly.
+Lettered parts a–z become separate tasks. Supported worksheet activities carry
+public interaction metadata and private server grading rules. Existing choices
+and numeric answers retain their types. Prose reasoning remains unscored and
+unreadable source diagrams are held for review, never guessed.
 """
 import re
 import sys
 
 from app.core.database import SessionLocal
-from app.models.attempt import Attempt
 from app.models.content_chunk import ContentChunk
 from app.models.lesson import Lesson
 from app.models.question import Question, QuestionType, ReviewStatus, SkillTag
+from scripts.math_interactions import adapt, extra_parts, focused_explanation
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 OPTION_LINE = re.compile(r"\*\s*([A-Z])\.\s*(.+)")
 # "C. 5" -> C ;  "D" -> D
-ANSWER_LETTER = re.compile(r"^\(?([A-Z])[\).\s]", re.M)
+ANSWER_LETTER = re.compile(r"^\(?([A-Z])(?:[\).\s]|$)", re.M)
 NUMERIC = re.compile(r"^-?[\d,]+(?:\.\d+)?$")
 # "a. 80 b. 50,000" and friends: more than one labelled part in one answer.
-MULTIPART = re.compile(r"(?:^|\s)[a-h][\.\)]\s")
+MULTIPART = re.compile(r"(?:^|\s)[a-z][\.\)]\s")
 UNDETERMINED = "cannot be determined"
 
 SKILL_ALIASES = {
@@ -48,7 +45,7 @@ def field(text: str, label: str) -> str | None:
 
 
 # "a. 8 in the Tens place?  b. 5 in the Ten Thousands place?" -> [(a, ...), (b, ...)]
-PART = re.compile(r"(?:^|\s)([a-h])[\.\)]\s+(.+?)(?=\s+[a-h][\.\)]\s|$)", re.S)
+PART = re.compile(r"(?:^|\s)([a-z])[\.\)]\s+(.+?)(?=\s+[a-z][\.\)]\s|$)", re.S)
 
 
 def split_parts(body: str, answer: str) -> list[tuple[str, str, str]]:
@@ -128,6 +125,7 @@ def run(lesson_order: int | None = None) -> None:
 
         tags = {tag.slug.value: tag.id for tag in db.query(SkillTag)}
         counts = {"mcq": 0, "numeric": 0, "short": 0, "unscored": 0}
+        held = 0
         touched_lessons = set()
 
         for chunk in chunks:
@@ -135,7 +133,7 @@ def run(lesson_order: int | None = None) -> None:
             answer = field(text, "ANSWER")
             body = field(text, "Question")
             if not answer or not body:
-                counts["unscored"] += 1
+                held += 1
                 continue
 
             number = chunk.chunk_metadata["question_number"]
@@ -146,14 +144,24 @@ def run(lesson_order: int | None = None) -> None:
             # Worksheet items like "a. ... b. ..." become one question per part,
             # so Math reads like the English and Science banks instead of one
             # ungradable wall of text.
-            parts = [] if options_raw else split_parts(body, answer)
+            source_order = chunk.chunk_metadata["lesson"]
+            parts = [] if options_raw else (extra_parts(source_order, number, body, answer) or split_parts(body, answer))
             variants = ([(f"q{number}", body, answer)] if not parts
                         else [(f"q{number}{key}", part_body, part_answer)
                               for key, part_body, part_answer in parts])
 
-            for source_key, part_body, part_answer in variants:
+            active_keys = set()
+            for part_order, (source_key, part_body, part_answer) in enumerate(variants):
+                active_keys.add(source_key)
                 qtype, options, correct, scored, accepted = classify(
                     part_answer, options_raw if len(variants) == 1 else None)
+                part = source_key.removeprefix(f"q{number}")
+                part_body, interaction_data = adapt(source_order, number, part, part_body, part_answer, qtype, options, correct)
+                if interaction_data:
+                    qtype, options, scored, accepted = QuestionType.short_answer, None, True, []
+                # Prose reasoning is a reflection, never exact-sentence grading.
+                if not interaction_data and not options and qtype == QuestionType.short_answer:
+                    scored = False
 
                 question = next(
                     (q for q in db.query(Question).filter_by(source_chunk_id=chunk.id)
@@ -167,17 +175,28 @@ def run(lesson_order: int | None = None) -> None:
                 question.qtype = qtype
                 question.options = options
                 question.correct_answer = correct
-                question.explanation = explanation
+                question.explanation = focused_explanation(interaction_data, part_answer, explanation, bool(parts))
                 question.grading_data = {
                     "number": number,
                     "source_key": source_key,
+                    "part": {"greatest": "العدد الأكبر", "smallest": "العدد الأصغر", "change": "تغيّر القيمة",
+                             "roundgreatest": "تقريب الأكبر", "roundsmallest": "تقريب الأصغر",
+                             "composed": "تكوين العدد", "expanded": "الصورة التحليلية"}.get(
+                                 part, part.replace("chart", " · الجدول").replace("expanded", " · الصورة التحليلية")),
+                    "part_order": part_order,
                     "scored": scored,
                     **({"accepted": accepted} if accepted else {}),
+                    **(interaction_data or {}),
                 }
-                question.review_status = ReviewStatus.approved
+                question.review_status = (ReviewStatus.rejected if UNDETERMINED in part_answer.lower()
+                                          else ReviewStatus.approved)
+                if question.review_status == ReviewStatus.rejected:
+                    question.grading_data = {**question.grading_data, "review_note": "Source diagram markings are unavailable."}
                 touched_lessons.add(chunk.lesson_id)
 
-                if not scored:
+                if question.review_status == ReviewStatus.rejected:
+                    held += 1
+                elif not scored:
                     counts["unscored"] += 1
                 elif qtype == QuestionType.mcq:
                     counts["mcq"] += 1
@@ -186,18 +205,10 @@ def run(lesson_order: int | None = None) -> None:
                 else:
                     counts["short"] += 1
 
-        # An earlier import stored one row per worksheet item, before questions
-        # were split into parts. Drop those superseded rows, but never one a
-        # student has already answered.
-        superseded = [q for q in db.query(Question).filter(Question.lesson_id.in_(touched_lessons))
-                      if not (q.grading_data or {}).get("source_key")]
-        removed = 0
-        for question in superseded:
-            if db.query(Attempt).filter_by(question_id=question.id).count() == 0:
-                db.delete(question)
-                removed += 1
-        if removed:
-            print(f"Removed {removed} superseded question row(s) from an earlier import.")
+            # Preserve IDs and attempts while retiring superseded worksheet rows.
+            for old in db.query(Question).filter_by(source_chunk_id=chunk.id):
+                if (old.grading_data or {}).get("source_key") not in active_keys:
+                    old.review_status = ReviewStatus.rejected
 
         for lesson_id in touched_lessons:
             lesson = db.get(Lesson, lesson_id)
@@ -211,6 +222,7 @@ def run(lesson_order: int | None = None) -> None:
         print(f"  numeric:         {counts['numeric']}")
         print(f"  short answer:    {counts['short']}")
         print(f"  unscored:        {counts['unscored']}  (shown for practice, excluded from accuracy)")
+        print(f"  held for review: {held}")
 
 
 if __name__ == "__main__":

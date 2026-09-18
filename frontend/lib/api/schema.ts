@@ -27,7 +27,9 @@ export type ActivityQuestion = {
   "qtype": QuestionTypeEnum;
   "body": string;
   "options"?: Record<string, unknown> | null;
+  "interaction"?: MathInteraction | null;
   "number": number;
+  "part"?: string;
   "scored": boolean;
   "previous_attempt_id"?: number;
 };
@@ -52,13 +54,32 @@ export type AnswerSubmission = {
   "answer": string;
 };
 
+export type Body_submit_math_api_backend_math_submit_post = {
+  "image": string;
+  "question_id": number;
+};
+
 export type Body_submit_math_math_submit_post = {
   "image": string;
   "question_id": number;
 };
 
+export type Body_turn_api_backend_voice_sessions__session_id__turn_post = {
+  "audio": string;
+};
+
 export type Body_turn_voice_sessions__session_id__turn_post = {
   "audio": string;
+};
+
+export type Body_tutor_feedback_api_backend_math_tutor_feedback_post = {
+  "image": string;
+  "question": string;
+};
+
+export type Body_tutor_feedback_math_tutor_feedback_post = {
+  "image": string;
+  "question": string;
 };
 
 export type ChatMessageRequest = {
@@ -150,10 +171,45 @@ export type MathCheckRequest = {
   "answer": string;
 };
 
+export type MathInteraction = {
+  "kind": "mark_digits" | "slots" | "order" | "compare" | "number_line" | "fields";
+  "instruction": string;
+  "tokens"?: Array<MathToken>;
+  "slots"?: Array<MathSlot>;
+  "reusable"?: boolean;
+  "number"?: string | null;
+  "left"?: string | null;
+  "right"?: string | null;
+  "lower"?: number | null;
+  "upper"?: number | null;
+  "value"?: number | null;
+};
+
+export type MathSlot = {
+  "id": string;
+  "label": string;
+  "shape"?: "circle" | "square" | "underline" | null;
+};
+
 export type MathSubmitResponse = {
   "verdict": MathVerdictEnum;
   "feedback": string;
   "extracted"?: Record<string, unknown> | null;
+};
+
+export type MathToken = {
+  "id": string;
+  "label": string;
+};
+
+export type MathTutorFeedbackResponse = {
+  "feedback": string;
+  "model": string;
+};
+
+export type MathTutorQuestionResponse = {
+  "question": string;
+  "model": string;
 };
 
 export type MathVerdictEnum = "correct" | "incorrect" | "unreadable";
@@ -187,6 +243,7 @@ export type QuestionPublic = {
   "qtype": QuestionTypeEnum;
   "body": string;
   "options"?: Record<string, unknown> | null;
+  "interaction"?: MathInteraction | null;
 };
 
 export type QuestionResult = {
@@ -278,4 +335,6 @@ export type ValidationError = {
   "loc": Array<string | number>;
   "msg": string;
   "type": string;
+  "input"?: unknown;
+  "ctx"?: Record<string, unknown>;
 };

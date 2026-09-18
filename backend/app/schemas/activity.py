@@ -4,6 +4,7 @@ from app.schemas.quiz import QuestionPublic, QuestionResult, SkillBreakdownItem,
 
 class ActivityQuestion(QuestionPublic):
     number: int
+    part: str = ""
     scored: bool
     previous_attempt_id: int = 0
 

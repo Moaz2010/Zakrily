@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { lessonsApi } from "@/lib/api";
 import { LessonQuestions } from "./LessonQuestions";
 import { StudySessionHeader } from "./StudySessionHeader";
@@ -14,22 +15,22 @@ export function ScienceActivityRoute({
   lessonId: number; practice: boolean; fallback: ReactNode; subject?: string;
 }) {
   const [supported, setSupported] = useState<boolean | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState("");
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     let active = true;
-    setFailed(false);
+    setFailed("");
     setSupported(null);
     lessonsApi.activity(lessonId)
-      .then((data) => { if (active) setSupported((data.total ?? 0) > 0); })
-      .catch(() => { if (active) setFailed(true); });
+      .then((data) => { if (active) setSupported(subject === "math" || (data.total ?? 0) > 0); })
+      .catch((error) => { if (active) setFailed(error?.status === 403 ? "أكمل الدرس السابق علشان تفتح أسئلة الدرس ده." : "تعذر تحميل الأسئلة. حاول مرة تانية."); });
     return () => { active = false; };
-  }, [lessonId, retry]);
+  }, [lessonId, retry, subject]);
   if (failed)
     return (
       <div className="p-6 text-center" role="alert" dir="rtl">
         <p className="text-sm text-[#774b48] font-bold mb-3">
-          تعذر تحميل أفكار وأسئلة هذا الدرس. يرجى المحاولة مرة أخرى.
+          {failed}
         </p>
         <button
           className="bg-[#527f76] hover:bg-[#3d655d] text-white font-black px-5 py-2.5 rounded-xl text-xs transition-all border-b-4 border-b-[#345e53] cursor-pointer"
@@ -37,6 +38,7 @@ export function ScienceActivityRoute({
         >
           إعادة المحاولة 🔄
         </button>
+        <Link className="block underline mt-4" href={`/lessons/${subject}`}>العودة لمسار الدروس</Link>
       </div>
     );
   if (supported === null) return <p role="status" className="p-6" dir="rtl">جاري تحميل أسئلة الدرس…</p>;

@@ -34,8 +34,7 @@ def lesson_path(db: Session, user_id: int, subject_id: int) -> list[PathNode]:
     subject = db.get(Subject, subject_id)
     for lesson, progress in rows:
         completed = progress is not None and progress.status == LessonStatus.completed
-        is_ready = not (subject.slug.value == "math" and lesson.order_index >= 3)
-        status = "completed" if completed else "unlocked" if (previous_completed and is_ready) else "locked"
+        status = "completed" if completed else "unlocked" if previous_completed else "locked"
         saved = (progress.learning_state or {}) if progress else {}
         parts = []
         learning_total = saved.get("learning_total")
@@ -62,7 +61,7 @@ def accessible_lesson(db: Session, user_id: int, lesson_id: int) -> Lesson:
         raise HTTPException(404, "Lesson not found")
     node = next(n for n in lesson_path(db, user_id, lesson.subject_id) if n.lesson_id == lesson_id)
     if node.status == "locked":
-        raise HTTPException(403, "Complete the previous lesson first")
+        raise HTTPException(403, "أكمل الدرس السابق الأول علشان تفتح أسئلة الدرس ده.")
     return lesson
 
 

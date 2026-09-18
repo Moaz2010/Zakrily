@@ -23,10 +23,7 @@ def load(db, user_id, lesson_id, lock=False):
         raise HTTPException(422, "This activity is available for Science, English, and Math lessons")
     bank = [(q, tag) for q, tag in approved_questions(db, lesson_id=lesson_id, include_unscored=True)
             if (q.grading_data or {}).get("number") is not None]
-    # Lead with questions that can be graded. Some Math items are worksheet
-    # instructions ("underline the digit…") that only carry a model answer, and
-    # opening the activity with one makes the lesson look broken.
-    bank.sort(key=lambda pair: not (pair[0].grading_data or {}).get("scored", True))
+    bank.sort(key=lambda pair: (pair[0].grading_data["number"], pair[0].grading_data.get("part_order", 0), pair[0].id))
     progress = db.get(LessonProgress, (user_id, lesson_id))
     return lesson, bank, progress
 
@@ -53,7 +50,9 @@ def state(db, user_id, lesson_id, practice=False):
     _, bank, progress = load(db, user_id, lesson_id)
     saved = (progress.learning_state or {}) if progress else {}
     latest, first = evidence(db, user_id, bank, saved.get("review_after", 0))
-    reflections = saved.get("review_reflections" if saved.get("review_active") else "reflections", {})
+    saved_reflections = saved.get("review_reflections" if saved.get("review_active") else "reflections", {})
+    reflections = {str(q.id): saved_reflections[str(q.id)] for q, _ in bank
+                   if not q.grading_data.get("scored", True) and str(q.id) in saved_reflections}
     totals = defaultdict(lambda: [0, 0])
     for q, tag in bank:
         if q.id in latest and q.grading_data.get("scored", True):
@@ -72,6 +71,7 @@ def state(db, user_id, lesson_id, practice=False):
             continue
         candidates.append(ActivityQuestion(**public_question(q, tag).model_dump(),
                                           number=q.grading_data["number"], scored=q.grading_data.get("scored", True),
+                                          part=q.grading_data.get("part", ""),
                                           previous_attempt_id=latest[q.id].id if q.id in latest else 0))
     candidates.sort(key=lambda q: q.number)
     correct = sum(s.correct for s in skills)
@@ -97,6 +97,8 @@ def submit(db, user_id, lesson_id, payload):
             raise HTTPException(422, "Reflections are not scored practice")
         reflection_key = "review_reflections" if saved.get("review_active") else "reflections"
         saved[reflection_key] = {**saved.get(reflection_key, {}), str(q.id): payload.answer}
+        feedback = QuestionResult(question_id=q.id, given_answer=payload.answer, is_correct=False,
+                                  correct_answer=q.correct_answer, explanation=q.explanation, skill_tag=tag.slug.value)
     elif not payload.practice and q.id in first:
         old = first[q.id]
         feedback = QuestionResult(question_id=q.id, given_answer=old.given_answer, is_correct=old.is_correct,

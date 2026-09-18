@@ -14,7 +14,7 @@ const SUBJECT_LABELS: Record<string, { ar: string; bg: string }> = {
 
 export default function PracticePage() {
   const params = useParams();
-  return params.subject === "science" || params.subject === "english"
+  return params.subject === "science" || params.subject === "english" || params.subject === "math"
     ? <ScienceActivityRoute subject={params.subject as string} lessonId={Number(params.lessonId)} practice={true} fallback={<LegacyPracticePage />} />
     : <LegacyPracticePage />;
 }

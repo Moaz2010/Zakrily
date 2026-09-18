@@ -1,0 +1,71 @@
+.question { --ink: #754944; --tint: #f2e9e4; min-width: 0; padding: 20px 16px; margin-block: 10px; border: 1px solid #dedbd4; border-radius: 26px; background: #fffefa; box-shadow: 0 4px 0 #e5e1da; }
+.source { font-size: 17px; font-weight: 650; line-height: 1.85; overflow-wrap: anywhere; text-align: start; }
+.source p { margin: 0 0 10px; white-space: pre-wrap; }
+.tableWrap { max-width: 100%; overflow-x: auto; border: 1px solid #d9dcd5; border-radius: 12px; margin-block: 14px; }
+.tableWrap table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tableWrap th, .tableWrap td { padding: 10px; border: 1px solid #e5e3dc; min-width: 90px; }
+.tableWrap th { background: #eeeae2; }
+.instruction { margin-block: 15px; padding: 12px; border-radius: 14px; background: var(--tint); color: var(--ink); font-size: 13px; line-height: 1.9; font-weight: 700; }
+.palette { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 9px; padding: 16px 2px; border-radius: 18px; }
+.tile { touch-action: none; user-select: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 13px; min-height: 46px; min-width: 44px; max-width: 100%; border: 1px solid #c7cec4; border-bottom: 3px solid #b9c3b4; border-radius: 13px; background: #edf1e8; color: #344c41; font: inherit; font-weight: 750; font-size: 15px; cursor: grab; overflow-wrap: anywhere; text-align: start; }
+.grip { flex: none; opacity: .5; font-size: 17px; }
+.tile.selected, .choice.selected { background: #e6d4c9; border-color: var(--ink); color: var(--ink); box-shadow: 0 0 0 2px #9e6e6030; }
+.slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding-block: 10px; }
+.slotCard { min-width: 0; text-align: center; border-radius: 16px; }
+.slotLabel { display: block; min-height: 32px; font-size: 10px; font-weight: 750; color: #72756d; line-height: 1.5; padding: 4px; }
+.slot { width: 100%; min-height: 51px; border: 2px dashed #c7c7bc; border-radius: 14px; background: #f7f6f0; color: #9c9c90; font: inherit; font-size: 22px; font-weight: 750; padding: 9px 6px; cursor: pointer; overflow-wrap: anywhere; }
+.slot.filled { border-style: solid; border-color: #ad9181; background: #f2e9e1; color: var(--ink); }
+.hover .slot, .digit.hover { border-color: #477c6b; background: #e4eee5; outline: 3px solid #9abeae; }
+.orderSlots { grid-template-columns: 1fr; gap: 8px; counter-reset: step; }
+.orderSlots .slotCard { display: grid; grid-template-columns: 24px 1fr; align-items: center; gap: 8px; }
+.orderSlots .slotLabel { min-height: auto; }
+.orderSlots .slot { font-size: 15px; text-align: start; min-height: 52px; }
+.orderSlots .placed { grid-column: 2; margin-top: -4px; min-height: 32px; padding: 5px 10px; font-size: 11px; opacity: .8; }
+.comparison { display: grid; grid-template-columns: 1fr 62px 1fr; gap: 8px; align-items: center; }
+.comparison .source { font-size: 15px; text-align: center; }
+.comparison .source p { margin: 0; }
+.comparison .slotLabel { display: none; }
+.comparison .slot { font-size: 30px; }
+.targetNumber { padding-block: 10px; text-align: center; font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.digitGroups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-block: 10px; }
+.digitGroup { padding: 9px 4px; border-radius: 14px; background: #f3f0e8; text-align: center; }
+.periodName { font-size: 11px; font-weight: 750; color: #71655b; }
+.digits { display: flex; justify-content: center; gap: 4px; padding-block: 10px; }
+.digitWrap { display: flex; align-items: center; min-width: 0; }
+.digit { position: relative; min-width: 0; width: 38px; height: 48px; padding: 0; background: white; border: 1px solid #e1dcd1; border-radius: 5px; font: inherit; font-size: 22px; font-weight: 850; color: #303831; cursor: pointer; }
+.comma { font-size: 20px; width: 5px; }
+.mark { position: absolute; inset: 4px -1px; pointer-events: none; border: 2px solid; }
+.circle { border-radius: 50%; border-color: #a1544c; }
+.square { border-radius: 3px; border-color: #446d98; }
+.underline { inset: auto 0 2px; height: 0; border-width: 0 0 3px; border-color: #4d7a58; }
+.markLegend { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; direction: ltr; font-size: 10px; color: #73665d; }
+.markLegend span { padding: 6px; background: #f1ede4; border-radius: 6px; }
+.fields { display: grid; gap: 12px; }
+.field { display: grid; gap: 8px; margin-block: 12px; font-size: 13px; font-weight: 750; color: var(--ink); }
+.field input, .field textarea { min-width: 0; width: 100%; padding: 14px; min-height: 52px; font: inherit; font-size: 20px; font-variant-numeric: tabular-nums; background: white; border: 2px solid #d5d9cf; border-radius: 15px; color: #303831; }
+.field textarea { font-size: 16px; line-height: 1.8; }
+.choices { display: grid; gap: 10px; margin-top: 16px; }
+.choice { display: flex; gap: 10px; align-items: center; text-align: start; min-height: 58px; padding: 13px; border: 2px solid #dedfd7; border-radius: 17px; background: white; color: #333c35; cursor: pointer; }
+.choice .source { font-size: 16px; }
+.choice p { margin: 0; }
+.optionLetter { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: #f0eee6; font-weight: 850; flex: none; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-top: 12px; border-top: 1px solid #e8e4dc; padding-top: 12px; }
+.controls button { border: 0; border-radius: 10px; padding: 10px; color: var(--ink); background: var(--tint); font: inherit; font-size: 12px; cursor: pointer; }
+.hint { font-size: 10px; color: #73776f; line-height: 1.8; }
+.numberLine { margin: 50px 12px 18px; }
+.line { position: relative; height: 4px; background: #506f61; margin-bottom: 14px; }
+.line::before, .line::after, .midTick { content: ""; position: absolute; top: -6px; height: 16px; width: 2px; background: #506f61; }
+.line::after { right: 0; }.midTick { left: 50%; }
+.numberPin { position: absolute; bottom: 13px; transform: translateX(-50%); padding: 6px 8px; border-radius: 10px; background: #754944; color: white; font-size: 12px; font-weight: 800; white-space: nowrap; }
+.numberPin::after { content: ""; position: absolute; left: 50%; bottom: -9px; border-inline: 5px solid transparent; border-top: 9px solid #754944; transform: translateX(-50%); }
+.endpoints { display: flex; justify-content: space-between; gap: 8px; }
+.endpoints button { max-width: 50%; overflow-wrap: anywhere; min-height: 44px; border: 2px solid #d2d9cf; border-radius: 10px; padding: 9px 5px; background: #f4f6f0; font-size: 12px; color: #3c5146; cursor: pointer; }
+.endpoints .chosenEndpoint { border-color: var(--ink); background: var(--tint); color: var(--ink); }
+.question button:disabled { cursor: default; opacity: .55; }
+.question button:focus-visible, .question input:focus-visible, .question textarea:focus-visible, .tableWrap:focus-visible { outline: 3px solid #b58650; outline-offset: 3px; }
+.dragGhost { position: fixed; pointer-events: none; z-index: 100; max-width: 240px; border-radius: 14px; padding: 10px 14px; background: #754944; color: white; box-shadow: 0 8px 25px #0003; transform: translate(-50%, -130%); font-size: 14px; }
+.digitOrder { grid-template-columns: repeat(var(--digit-count), minmax(0, 1fr)); gap: 4px; }
+.digitOrder .slotLabel { font-size: 9px; min-height: 20px; }
+.digitOrder .slot { padding: 6px 1px; border-radius: 8px; font-size: 18px; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 360px) { .question { padding: 16px 10px; }.digit { width: 32px; font-size: 20px; }.digits { gap: 3px; }.source { font-size: 16px; }.comparison { grid-template-columns: 1fr 48px 1fr; }.slots { gap: 6px; }.digitOrder { gap: 2px; }.slotLabel { font-size: 9px; } }

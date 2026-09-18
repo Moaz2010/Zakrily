@@ -5,6 +5,8 @@ import { lessonsApi, type ActivityState, type ActivityQuestion } from "@/lib/api
 import { useLearner } from "@/lib/learner-context";
 import { subjectTheme } from "@/lib/subject-theme";
 import styles from "./StudySession.module.css";
+import { MathQuestion, MathText } from "./MathQuestion";
+import { describeMathAnswer, interactionComplete } from "@/lib/math-interaction";
 
 const labels: Record<string, string> = {
   memorization: "تذكر (Remembering)",
@@ -70,6 +72,7 @@ export function LessonQuestions({
   const [error, setError] = useState("");
   const [checked, setChecked] = useState<ActivityQuestion | null>(null);
   const [draftStatus, setDraftStatus] = useState("");
+  const [sessionStreak, setSessionStreak] = useState(0);
   const draftRequest = useRef<Promise<unknown>>(Promise.resolve());
   const question = data?.questions[0];
 
@@ -124,7 +127,7 @@ export function LessonQuestions({
   }, [load]);
 
   useEffect(() => {
-    if (!question || checked || practice || !answer) return;
+    if (!question || checked || practice) return;
     const timer = setTimeout(() => saveDraft(answer), 500);
     return () => clearTimeout(timer);
   }, [answer, question?.id, checked, practice]);
@@ -152,7 +155,7 @@ export function LessonQuestions({
   }
 
   async function submit() {
-    if (!question || !answer.trim() || busy) return;
+    if (!question || !interactionComplete(question.interaction, answer) || busy) return;
     setBusy(true);
     setError("");
     try {
@@ -165,6 +168,7 @@ export function LessonQuestions({
       });
       setChecked(question);
       setData(next);
+      if (!next.reflection_saved) setSessionStreak((streak) => next.feedback?.is_correct ? streak + 1 : 0);
       try {
         localStorage.removeItem(draftKey(question));
       } catch {
@@ -216,7 +220,7 @@ export function LessonQuestions({
           disabled={busy}
           onClick={() => setPractice(false)}
         >
-          📖 أسئلة الدرس (Lesson Questions)
+          {subject === "math" ? "أسئلة الدرس" : "📖 أسئلة الدرس (Lesson Questions)"}
         </button>
         <button
           className={practice ? styles.primary : styles.secondary}
@@ -224,7 +228,7 @@ export function LessonQuestions({
           disabled={busy}
           onClick={() => setPractice(true)}
         >
-          🎯 تدريب المهارات (Skill Practice)
+          {subject === "math" ? "تدريب المهارات" : "🎯 تدريب المهارات (Skill Practice)"}
         </button>
       </div>
 
@@ -247,6 +251,7 @@ export function LessonQuestions({
               {data.score == null ? "لا يوجد تقييم بعد" : `الدقة: ${Math.round(data.score * 100)}٪`}
             </strong>
           </div>
+          {subject === "math" && sessionStreak > 1 && <p className={styles.badge} role="status">✦ {sessionStreak} إجابات صح ورا بعض في الجولة دي!</p>}
 
           <div
             className={styles.progress}
@@ -295,12 +300,10 @@ export function LessonQuestions({
                 </p>
               )}
 
-              <p className="font-bold text-sm text-[#292c32] mb-3" dir="ltr" lang="en">
-                {checked.body}
-              </p>
+              {subject === "math" ? <MathText text={checked.body} /> : <p className="font-bold text-sm text-[#292c32] mb-3" dir="ltr" lang="en">{checked.body}</p>}
 
               {data.reflection_saved ? (
-                <p>هذا السؤال مخصص لاستكشاف الفكرة والتفكير الشخصي.</p>
+                <div><p>تم حفظ فكرتك من غير درجات. قارنها بالشرح:</p>{data.feedback && <MathText text={`${data.feedback.correct_answer}\n\n${data.feedback.explanation}`} />}</div>
               ) : (
                 <div className="space-y-3 my-3 text-right">
                   {/* Given Answer */}
@@ -308,9 +311,9 @@ export function LessonQuestions({
                     <span className="font-black text-xs text-[#536b62] block mb-1">
                       👤 إجابتك (Your Answer):
                     </span>
-                    <span className="font-bold text-sm text-[#292c32]" dir="auto">
+                    <span className="font-bold text-sm text-[#292c32] whitespace-pre-wrap" dir="auto">
                       {(checked.options?.[data.feedback?.given_answer ?? ""] as string) ??
-                        data.feedback?.given_answer}
+                        describeMathAnswer(checked.interaction, data.feedback?.given_answer ?? "")}
                     </span>
                   </div>
 
@@ -319,14 +322,14 @@ export function LessonQuestions({
                     <span className="font-black text-xs text-[#1e5c4a] block mb-1">
                       ✅ الإجابة النموذجية الصحيحة (Model Answer):
                     </span>
-                    <span className="font-bold text-sm text-[#1e5c4a]" dir="auto">
+                    <span className="font-bold text-sm text-[#1e5c4a] whitespace-pre-wrap" dir="auto">
                       {(checked.options?.[data.feedback?.correct_answer ?? ""] as string) ??
                         data.feedback?.correct_answer}
                     </span>
                   </div>
 
                   {/* Child-friendly Bilingual Explanation with sentence linebreaks */}
-                  {(() => {
+                  {subject === "math" ? <MathText text={data.feedback?.explanation ?? ""} /> : (() => {
                     const exp = formatChildExplanation(
                       data.feedback?.explanation,
                       data.feedback?.is_correct,
@@ -367,17 +370,17 @@ export function LessonQuestions({
           ) : question ? (
             <div className={styles.questions} dir="rtl">
               <div className={styles.counter}>
-                <span>سؤال {question.number}</span>
-                <span>{labels[question.skill_tag]}</span>
+                <span>سؤال {question.number}{question.part && ` · ${question.part}`}</span>
+                <span>{subject === "math" ? labels[question.skill_tag].split(" (")[0] : labels[question.skill_tag]}</span>
               </div>
 
               {/* Question Body */}
-              <h3 className={styles.question} dir="ltr" lang="en">
+              {subject !== "math" && <h3 className={styles.question} dir="ltr" lang="en">
                 {question.body}
-              </h3>
+              </h3>}
 
               {/* Display Picture ONLY for Lesson 1 Question 29 */}
-              {lessonId === 12 && question.number === 29 && (
+              {subject === "science" && lessonId === 12 && question.number === 29 && (
                 <div className="my-3 rounded-2xl overflow-hidden border-2 border-[#527f76]/30 shadow-xs max-w-xl mx-auto bg-white">
                   <img
                     src="/question29.jpg"
@@ -390,7 +393,7 @@ export function LessonQuestions({
                 </div>
               )}
 
-              {question.options ? (
+              {subject === "math" ? <MathQuestion key={question.id} question={question} answer={answer} onChange={editAnswer} disabled={busy} /> : question.options ? (
                 <div className="flex flex-col gap-3 my-3">
                   {Object.entries(question.options).map(([key, value]) => (
                     <button
@@ -429,7 +432,7 @@ export function LessonQuestions({
               <div className={styles.navigation}>
                 <button
                   className={styles.primary}
-                  disabled={busy || !answer.trim()}
+                  disabled={busy || !interactionComplete(question.interaction, answer)}
                   onClick={() => void submit()}
                 >
                   {busy ? "جاري الحفظ…" : "تحقق وحفظ الإجابة 🚀"}

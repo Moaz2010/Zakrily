@@ -1,6 +1,7 @@
 from pydantic import AliasChoices, BaseModel, Field
 
 from app.schemas.common import QuestionTypeEnum, SkillTagEnum
+from app.schemas.math_interaction import MathInteraction
 
 
 class QuestionPublic(BaseModel):
@@ -12,6 +13,7 @@ class QuestionPublic(BaseModel):
     qtype: QuestionTypeEnum
     body: str
     options: dict | None = None
+    interaction: MathInteraction | None = None
 
 
 class QuizOut(BaseModel):
