@@ -41,6 +41,8 @@ import type {
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   process.env.NEXT_PUBLIC_API_BASE_URL ??
+  // The Vercel monorepo routes the backend through this same-origin prefix.
+  // Keep localhost as the development default, where no rewrite is present.
   (process.env.NODE_ENV === "production" ? "/api/backend" : "http://localhost:8000");
 
 // ── Core fetch wrapper ────────────────────────────────────────────────────────
