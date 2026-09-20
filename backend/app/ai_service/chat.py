@@ -68,6 +68,11 @@ def explain(lesson_id: int, question: str, history: list[dict], *, db: Session |
             response.raise_for_status()
             reply = response.json()["choices"][0]["message"]["content"]
             return reply.strip() if isinstance(reply, str) and reply.strip() else fallback
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        hint = "Check GROQ_API_KEY in backend/.env" if status in {401, 403} else "Check Groq availability and model configuration"
+        logging.getLogger(__name__).warning("Lesson explanation provider returned HTTP %s. %s", status, hint)
+        return fallback
     except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
         logging.getLogger(__name__).warning("Lesson explanation provider unavailable")
         return fallback

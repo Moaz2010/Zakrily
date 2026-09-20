@@ -28,6 +28,9 @@
 .card { position: relative; isolation: isolate; overflow: hidden; border-radius: 42px; display: block; padding: 20px; text-align: start; text-decoration: none; color: #f8f8f8; width: 100%; }
 .card h3 { position: relative; font-size: 32px; font-weight: 850; line-height: 1.1; margin: 0; z-index: 1; }
 .quiz { background: #292c32; min-height: 172px; margin-bottom: 12px; }
+.generated { background: var(--subject-color, #527f76); min-height: 172px; margin-bottom: 12px; }
+.generated h3 { font-size: 30px; }
+.generated .quizFooter p { color: white; font-size: 17px; line-height: 1.7; }
 .quiz h3 { text-align: start; }
 .quizFooter { display: flex; align-items: flex-end; justify-content: space-between; direction: ltr; gap: 12px; margin-top: 20px; }
 .quizFooter p { font-size: 21px; line-height: 1.2; font-weight: 750; color: #d0d0d1; text-align: start; direction: rtl; }

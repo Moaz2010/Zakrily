@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.ai_service import voice
@@ -28,6 +29,25 @@ def output(session_id, reply, transcript="", done=False):
     except HTTPException as exc:
         audio, error = [], exc.detail
     return dict(session_id=session_id, reply=reply, transcript=transcript, audio=audio, audio_error=error, done=done)
+
+
+class PronunciationRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=240)
+
+    @field_validator("text")
+    @classmethod
+    def strip_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Text must not be blank")
+        return value
+
+
+@router.post("/lessons/{lesson_id}/pronounce")
+def pronounce(lesson_id: int, request: PronunciationRequest,
+              db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    english_lesson(db, user, lesson_id)
+    return {"audio": voice.synthesize(request.text)}
 
 
 @router.post("/lessons/{lesson_id}/start")

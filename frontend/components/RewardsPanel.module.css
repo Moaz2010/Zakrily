@@ -1,0 +1,24 @@
+.panel { margin: 18px 0; padding: 20px; border: 1px solid #d6e1d9; border-radius: 22px; background: #f7faf6; color: #294a41; font-size: 13px; line-height: 1.8; }
+.heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.heading h2 { font-size: 18px; font-weight: 800; margin: 0; }
+.heading a, .panel button { text-decoration: underline; cursor: pointer; }
+.totals { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
+.totals > div { display: flex; flex-direction: column; align-items: center; padding: 14px; background: white; border-radius: 16px; }
+.totals strong { font-size: 27px; font-weight: 800; }
+.progressLabel { display: flex; justify-content: space-between; }
+.panel progress { width: 100%; height: 12px; accent-color: #527f76; }
+.hint { margin: 3px 0; color: #64736c; font-size: 12px; }
+.badges { display: flex; justify-content: space-between; gap: 3px; margin-top: 20px; }
+.badges span { color: #c6cdc8; font-size: 24px; }
+.badges span[data-earned="true"] { color: #b18b2d; }
+.discount { padding: 14px; background: #fff1c9; border-radius: 14px; margin-top: 12px; color: #674d19; }
+.discount p { margin: 4px 0 0; }
+.streak { padding: 14px 0; }
+.rules summary { cursor: pointer; font-weight: 700; }
+.rules ul { list-style: disc; padding-inline-start: 20px; }
+.historyTitle { margin-top: 22px; font-size: 16px; font-weight: 800; }
+.history { list-style: none; padding: 0; margin: 0; }
+.history li { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; gap: 10px; border-bottom: 1px solid #dfe7df; }
+.history time { display: block; font-size: 10px; color: #6c7971; }
+.history strong { color: #346e50; direction: ltr; }
+.more { display: block; margin: 14px auto 0; }

@@ -63,7 +63,7 @@ export default function LessonDetailPage() {
     ) : subject === "english" && lesson.order === 1 ? (
       <EnglishLearn key={`learn-${lesson.lesson_id}`} lessonId={lesson.lesson_id} onProgress={() => { subjectsApi.path(subject).then(setNodes).catch(() => {}); }} onCompletePractice={() => setMode("practice")} />
     ) : (
-      <GenericLearn key={`generic-${lesson.lesson_id}`} sections={detail.sections} onCompletePractice={() => setMode("practice")} />
+      <GenericLearn key={`generic-${lesson.lesson_id}`} lessonId={lesson.lesson_id} sections={detail.sections} onCompletePractice={() => setMode("practice")} />
     )}
     {lesson.status !== "locked" && (
       <LessonChat

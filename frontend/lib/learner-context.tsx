@@ -3,10 +3,14 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type FormEvent } from "react";
 import { usePathname } from "next/navigation";
 import { authApi, progressApi, type LearnerStats, type UserOut } from "@/lib/api";
+import { rewardsApi, type Rewards } from "@/lib/api";
 
 type LearnerContext = {
   user: UserOut;
   stats: LearnerStats | null;
+  rewards: Rewards | null;
+  rewardsError: boolean;
+  refreshRewards: () => Promise<void>;
   error: boolean;
   refresh: () => Promise<void>;
   signOut: () => void;
@@ -16,6 +20,9 @@ const Context = createContext<LearnerContext | null>(null);
 export function LearnerProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserOut | null>(null);
   const [stats, setStats] = useState<LearnerStats | null>(null);
+  const [rewards, setRewards] = useState<Rewards | null>(null);
+  const [rewardsError, setRewardsError] = useState(false);
+  const rewardRequest = useRef(0);
   const [checking, setChecking] = useState(true);
   const [authError, setAuthError] = useState(false);
   const [error, setError] = useState(false);
@@ -24,9 +31,12 @@ export function LearnerProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(() => {
     request.current++;
+    rewardRequest.current++;
     localStorage.removeItem("zakrely_token");
     setUser(null);
     setStats(null);
+    setRewards(null);
+    setRewardsError(false);
     setError(false);
   }, []);
 
@@ -46,8 +56,20 @@ export function LearnerProvider({ children }: { children: React.ReactNode }) {
     return () => { window.removeEventListener("zakrely:unauthorized", signOut); request.current++; };
   }, [checkSession, signOut]);
 
+  const refreshRewards = useCallback(async () => {
+    if (!user) return;
+    const id = ++rewardRequest.current;
+    try {
+      const data = await rewardsApi.get();
+      if (id === rewardRequest.current) { setRewards(data); setRewardsError(false); }
+    } catch {
+      if (id === rewardRequest.current) setRewardsError(true);
+    }
+  }, [user]);
+
   const refresh = useCallback(async () => {
     if (!user) return;
+    void refreshRewards();
     const id = ++request.current;
     setError(false);
     try {
@@ -56,7 +78,7 @@ export function LearnerProvider({ children }: { children: React.ReactNode }) {
     } catch {
       if (id === request.current) { setStats(null); setError(true); }
     }
-  }, [user]);
+  }, [user, refreshRewards]);
 
   useEffect(() => { void refresh(); }, [refresh, pathname]);
   useEffect(() => {
@@ -68,7 +90,7 @@ export function LearnerProvider({ children }: { children: React.ReactNode }) {
   if (checking) return <p className="p-12 text-center" role="status">جاري تحميل حسابك…</p>;
   if (authError) return <div className="p-12 text-center" role="alert"><p>تعذر الاتصال بالخادم.</p><button onClick={() => void checkSession()} className="mt-4 underline">إعادة المحاولة</button></div>;
   if (!user) return <SignIn onSuccess={(account) => { setStats(null); setUser(account); }} />;
-  return <Context.Provider value={{ user, stats, error, refresh, signOut }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ user, stats, rewards, rewardsError, refreshRewards, error, refresh, signOut }}><div key={user.id}>{children}</div></Context.Provider>;
 }
 
 function SignIn({ onSuccess }: { onSuccess: (user: UserOut) => void }) {

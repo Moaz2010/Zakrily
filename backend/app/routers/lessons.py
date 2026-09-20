@@ -12,8 +12,39 @@ from app.services.grading import approved_questions, public_question
 from app.services.progress import accessible_lesson
 from app.services import lesson_activity
 from app.schemas.activity import ActivityState, ActivityAnswer, ActivityProgress
+from app.services import rewards
+from app.services.learning_cards import card_count as count_learning_cards
+from app.models.attempt import LessonProgress
 
 router = APIRouter(tags=["lessons"])
+
+
+@router.get("/lessons/{lesson_id}/learning")
+def get_learning(lesson_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    lesson = accessible_lesson(db, current_user.id, lesson_id)
+    progress = db.get(LessonProgress, (current_user.id, lesson_id))
+    return dict(learned_steps=(progress.learning_state or {}).get("learned_steps", []) if progress else [],
+                learning_total=count_learning_cards(db, lesson))
+
+
+@router.put("/lessons/{lesson_id}/learning")
+def save_learning(lesson_id: int, payload: ActivityProgress,
+                  current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    lesson = accessible_lesson(db, current_user.id, lesson_id)
+    count = count_learning_cards(db, lesson)
+    if any(step not in range(count) for step in payload.learned_steps):
+        raise HTTPException(422, "Unknown learning stop")
+    account = rewards.locked_account(db, current_user.id)
+    progress = lesson_activity.ensure_progress(db, current_user.id, lesson_id,
+                                               db.get(LessonProgress, (current_user.id, lesson_id)))
+    saved = dict(progress.learning_state or {})
+    saved["learning_total"] = count
+    saved["learned_steps"] = sorted(set(saved.get("learned_steps", [])) | set(payload.learned_steps))
+    progress.learning_state = saved
+    for step in set(payload.learned_steps):
+        rewards.award(db, account, f"card:{lesson_id}:{step}", "card", 10)
+    db.commit()
+    return dict(learned_steps=saved["learned_steps"], learning_total=count)
 
 
 @router.get("/lessons/{lesson_id}/activity", response_model=ActivityState)
@@ -34,11 +65,13 @@ def restart_activity(lesson_id: int, current_user: User = Depends(get_current_us
 @router.put("/lessons/{lesson_id}/activity/progress", response_model=ActivityState)
 def save_activity_progress(lesson_id: int, payload: ActivityProgress, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     lesson, bank, progress = lesson_activity.load(db, current_user.id, lesson_id, lock=True)
-    # Lesson 2 has six existing cards and five source-based memory cards.
-    card_count = {1: 20, 2: 11}.get(lesson.order_index, payload.learning_total or 500)
+    card_count = count_learning_cards(db, lesson)
     if any(step not in range(card_count) for step in payload.learned_steps):
         raise HTTPException(422, "Unknown learning stop")
     progress = lesson_activity.ensure_progress(db, current_user.id, lesson_id, progress)
+    account = rewards.locked_account(db, current_user.id)
+    for step in set(payload.learned_steps):
+        rewards.award(db, account, f"card:{lesson_id}:{step}", "card", 10)
     saved = dict(progress.learning_state or {})
     saved["learning_total"] = card_count
     saved["learned_steps"] = sorted(set(saved.get("learned_steps", [])) | set(payload.learned_steps))
@@ -64,8 +97,4 @@ def get_lesson(lesson_id: int, current_user: User = Depends(get_current_user), d
 @router.get("/lessons/{lesson_id}/quiz", response_model=QuizOut)
 def get_quiz(lesson_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     accessible_lesson(db, current_user.id, lesson_id)
-    lesson = db.get(Lesson, lesson_id)
-    # Exclude comprehension questions from quiz for English lessons (they're in the learning path)
-    subject = db.get(Subject, lesson.subject_id) if lesson else None
-    exclude_comprehension = subject.slug == SubjectSlug.english if subject else False
-    return QuizOut(questions=[public_question(q, tag) for q, tag in approved_questions(db, lesson_id=lesson_id, exclude_comprehension=exclude_comprehension)])
+    return QuizOut(questions=[public_question(q, tag) for q, tag in approved_questions(db, lesson_id=lesson_id)])

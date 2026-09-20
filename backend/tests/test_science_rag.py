@@ -63,6 +63,34 @@ def test_retrieval_scopes_and_empty_results(db, science):
     assert retrieve("habitat", science.id, k=0, db=db) == []
 
 
+def test_legacy_index_is_reembedded_without_mixing_vectors(db, science):
+    expected = [c.id for c in retrieve("What is a habitat?", science.id, db=db)]
+    rows = db.query(ContentChunk).filter_by(lesson_id=science.id).all()
+    for row in rows:
+        row.chunk_metadata = {**row.chunk_metadata, "embedding_model": "lexical-hash-v1"}
+        row.embedding = [0.0] * len(row.embedding)
+    db.commit()
+    assert [c.id for c in retrieve("What is a habitat?", science.id, db=db)] == expected
+    assert retrieve("habitat", science.id + 1, db=db) == []
+    for row in rows:
+        row.chunk_metadata = {**row.chunk_metadata, "retired": True}
+    db.commit()
+    assert retrieve("habitat", science.id, db=db) == []
+
+
+def test_invalid_provider_key_logs_actionable_error(db, science, monkeypatch, caplog):
+    import httpx
+    monkeypatch.setattr(chat.settings, "groq_api_key", "test-key")
+    factory = MagicMock()
+    response = httpx.Response(401, request=httpx.Request("POST", "https://api.groq.com"))
+    factory.return_value.__enter__.return_value.post.return_value = response
+    monkeypatch.setattr(chat.httpx, "Client", factory)
+    reply = chat.explain(science.id, "What is a habitat?", [], db=db)
+    assert "مش متاح" in reply
+    assert "HTTP 401" in caplog.text and "GROQ_API_KEY" in caplog.text
+    assert "test-key" not in caplog.text
+
+
 def test_website_path_chat_and_actual_grounding(client, db, science, monkeypatch):
     user = User(name="Science learner", email="science@example.com", password_hash="unused")
     other = User(name="Other", email="other@example.com", password_hash="unused")

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { PronunciationButton } from "./PronunciationButton";
 import { lessonsApi } from "@/lib/api";
 import { useLearner } from "@/lib/learner-context";
 import styles from "./ScienceLearn.module.css";
@@ -201,7 +202,7 @@ export function EnglishLearn({
   onProgress?: () => void;
 }) {
   const [step, setStep] = useState(0);
-  const { refresh } = useLearner();
+  const { user, rewards, refresh } = useLearner();
   const [learned, setLearned] = useState<number[]>([]);
   const [saveError, setSaveError] = useState("");
 
@@ -209,7 +210,7 @@ export function EnglishLearn({
     setSaveError("");
     let localLearned: number[] = [];
     try {
-      const raw = localStorage.getItem(`zakrely_learned_${lessonId}`);
+      const raw = localStorage.getItem(`zakrely_learned_${user.id}_${lessonId}`);
       if (raw) localLearned = JSON.parse(raw);
     } catch {}
     if (localLearned.length > 0) {
@@ -247,7 +248,7 @@ export function EnglishLearn({
     const newLearned = [...new Set([...learned, step])];
     setLearned(newLearned);
     try {
-      localStorage.setItem(`zakrely_learned_${lessonId}`, JSON.stringify(newLearned));
+      localStorage.setItem(`zakrely_learned_${user.id}_${lessonId}`, JSON.stringify(newLearned));
     } catch {}
     if (step < TOTAL_CARDS - 1) go(step + 1);
     else setStep(TOTAL_CARDS);
@@ -262,7 +263,7 @@ export function EnglishLearn({
     <div className={`${styles.learnContainer} ${styles.englishLearn}`} dir="ltr" lang="en" aria-label="Explore English Lesson 1">
       <header className={styles.duoHeader}>
         <div className={styles.headerLeft} dir="rtl">
-          <span className={styles.duoBadge}>🌟 نقاط +{learned.length * 10}</span>
+          <span className={styles.duoBadge}>🌟 نقاط +{rewards?.points ?? 0}</span>
           <span className={styles.stepCount}>بطاقة {current} من {TOTAL_CARDS}</span>
         </div>
         <div className={styles.duoProgress} role="progressbar" aria-valuenow={current} aria-valuemin={0} aria-valuemax={TOTAL_CARDS}>
@@ -287,7 +288,7 @@ export function EnglishLearn({
               {SENSES.map((sense) => (
                 <article key={sense.en} className={styles.senseTile}>
                   <span className={styles.bigEmoji} aria-hidden="true">{sense.icon}</span>
-                  <strong>{sense.en}</strong>
+                  <strong>{sense.en}</strong><PronunciationButton lessonId={lessonId} text={sense.en} />
                   <small dir="rtl">{sense.ar}</small>
                 </article>
               ))}
@@ -306,7 +307,7 @@ export function EnglishLearn({
                 <article key={en} className={styles.factRow}>
                   <span className="text-2xl" aria-hidden="true">{icon}</span>
                   <div>
-                    <strong>{en}</strong>
+                    <strong>{en}</strong><PronunciationButton lessonId={lessonId} text={en} />
                     <small className={styles.englishHint} dir="rtl">{ar}</small>
                   </div>
                 </article>
@@ -321,9 +322,9 @@ export function EnglishLearn({
               {SENSES.map((sense) => (
                 <article key={sense.en} className={styles.senseTile}>
                   <span className={styles.bigEmoji} aria-hidden="true">{sense.icon}</span>
-                  <strong>{sense.en}</strong>
+                  <strong>{sense.en}</strong><PronunciationButton lessonId={lessonId} text={sense.en} />
                   <small dir="rtl">{sense.ar}</small>
-                  <span className={styles.pill}>{sense.organ} · {sense.organAr}</span>
+                  <span className={styles.pill}>{sense.organ} · {sense.organAr}<PronunciationButton lessonId={lessonId} text={sense.organ} /></span>
                 </article>
               ))}
             </div>
@@ -340,9 +341,9 @@ export function EnglishLearn({
           >
             <article className={styles.conceptCard}>
               <span className={styles.bigEmoji} aria-hidden="true">{sense.icon}</span>
-              <h4 dir="ltr">{sense.sentence}</h4>
+              <h4 dir="ltr">{sense.sentence}<PronunciationButton lessonId={lessonId} text={sense.sentence} /></h4>
               <p dir="rtl">{sense.sentenceAr}</p>
-              <span className={styles.pill}>{sense.organ} · {sense.organAr}</span>
+              <span className={styles.pill}>{sense.organ} · {sense.organAr}<PronunciationButton lessonId={lessonId} text={sense.organ} /></span>
             </article>
             <div className={styles.idea} dir="rtl">
               <span aria-hidden="true">💡</span>
@@ -419,7 +420,7 @@ export function EnglishLearn({
               ].map(([icon, en, ar]) => (
                 <article key={en} className={styles.vocabTile}>
                   <span className="text-2xl block mb-1" aria-hidden="true">{icon}</span>
-                  <strong>{en}</strong>
+                  <strong>{en}</strong><PronunciationButton lessonId={lessonId} text={en} />
                   <small dir="rtl">{ar}</small>
                 </article>
               ))}
@@ -486,7 +487,7 @@ export function EnglishLearn({
               {LISTENING.map((line, index) => (
                 <p key={line} className={styles.bullet}>
                   <span aria-hidden="true">{index + 1}</span>
-                  <span dir="ltr">{line}</span>
+                  <span dir="ltr">{line}<PronunciationButton lessonId={lessonId} text={line} /></span>
                 </p>
               ))}
             </div>
@@ -600,8 +601,8 @@ export function EnglishLearn({
               ["understand", "understood"],
             ].map(([present, past]) => (
               <div className={styles.tableRow} key={present}>
-                <span>{present}</span>
-                <span>{past}</span>
+                <span>{present}<PronunciationButton lessonId={lessonId} text={present} /></span>
+                <span>{past}<PronunciationButton lessonId={lessonId} text={past} /></span>
               </div>
             ))}
             <p className={styles.helper} dir="rtl">hear → heard و sing → sang أفعال شاذة (irregular).</p>
@@ -628,7 +629,7 @@ export function EnglishLearn({
               ].map(([en, ar]) => (
                 <article key={en} className={styles.factRow}>
                   <div>
-                    <strong dir="ltr">{en}</strong>
+                    <strong dir="ltr">{en}</strong><PronunciationButton lessonId={lessonId} text={en} />
                     <small className={styles.englishHint} dir="rtl">{ar}</small>
                   </div>
                 </article>
@@ -659,7 +660,7 @@ export function EnglishLearn({
             <div className={styles.wordGrid}>
               {WORDS.slice(0, 8).map(([en, ar, example]) => (
                 <article key={en} className={styles.vocabTile}>
-                  <strong dir="ltr">{en}</strong>
+                  <strong dir="ltr">{en}</strong><PronunciationButton lessonId={lessonId} text={en} />
                   <small dir="rtl">{ar}</small>
                   <span className={styles.pill} dir="ltr">{example}</span>
                 </article>

@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.routers import auth, chat, lessons, math, practice, progress, quiz, skills, subjects
 from app.routers import voice
+from app.routers import generated_quiz
+from app.routers import rewards
 
 app = FastAPI(title=settings.app_name)
 
@@ -25,6 +27,8 @@ app.include_router(practice.router)
 app.include_router(chat.router)
 app.include_router(math.router)
 app.include_router(voice.router)
+app.include_router(generated_quiz.router)
+app.include_router(rewards.router)
 
 
 @app.get("/health")
