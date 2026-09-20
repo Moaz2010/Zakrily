@@ -1,0 +1,69 @@
+.frame {
+  position: relative;
+  border-radius: 26px;
+  overflow: hidden;
+  background: #101312;
+  box-shadow: 0 18px 44px #1e2b2733;
+}
+
+/* Padding-top keeps a stable 16:9 box before the iframe loads, so the page
+   does not jump once the player appears. */
+.ratio {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+}
+
+.video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  /* YouTube letterboxes inside the iframe; scaling up crops the bars away so
+     the hero reads as full-bleed footage rather than an embed. */
+  transform: scale(1.32);
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #0c1a1690 0%, #0c1a1620 45%, transparent 75%);
+  pointer-events: none;
+}
+
+.sound {
+  position: absolute;
+  inset-inline-end: 12px;
+  inset-block-end: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border: 1px solid #ffffff38;
+  border-radius: 999px;
+  background: #0f1a17b8;
+  backdrop-filter: blur(8px);
+  color: #f4f7f4;
+  font-size: 12px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .18s ease, transform .18s ease;
+}
+
+.sound:hover { background: #16302ad9; transform: translateY(-1px); }
+.sound:focus-visible { outline: 3px solid #d9a56a; outline-offset: 3px; }
+.sound svg { width: 15px; height: 15px; }
+
+@media (max-width: 380px) {
+  .sound span { display: none; }
+  .sound { padding: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sound { transition: none; }
+  .sound:hover { transform: none; }
+}
