@@ -81,6 +81,7 @@ def test_three_attempts_resume_grade_and_practice(client, db, setup_quiz):
         assert graded.status_code == 200
         result = graded.json()["result"]
         assert result["correct"] == 12 and result["total"] == 15
+        assert result["motivation_points"] == 10
         assert result["weakest_skills"] == ["analysis"]
         count = db.query(Attempt).count()
         assert client.post(f"{base}/{run['id']}/submit", json=answers(run)).json()["result"] == result
@@ -102,6 +103,24 @@ def test_three_attempts_resume_grade_and_practice(client, db, setup_quiz):
     # Generated questions must not leak into the shared lesson exercise bank.
     generated_ids = {qid for row in db.query(GeneratedQuiz) for qid in row.question_ids}
     assert not generated_ids.intersection(q["id"] for q in client.get(f"/lessons/{lesson.id}/quiz").json()["questions"])
+
+
+def test_generated_quiz_90_percent_gets_higher_motivation_reward(client, db, setup_quiz):
+    lesson, user, _ = setup_quiz
+    base = f"/lessons/{lesson.id}/generated-quiz"
+    run = client.post(base + "/start", json={}).json()
+    payload = answers(run)
+    payload["answers"][0]["answer"] = "B"  # 14/15 = 93%
+    response = client.post(f"{base}/{run['id']}/submit", json=payload)
+    assert response.status_code == 200
+    result = response.json()["result"]
+    assert result["score"] >= .9
+    assert result["motivation_points"] == 20
+    assert "٩٠٪" in result["motivation_message"]
+    # Replaying the submission returns the stored result and cannot award again.
+    assert client.post(f"{base}/{run['id']}/submit", json=answers(run)).json()["result"] == result
+    rewards_summary = client.get("/me/rewards").json()
+    assert rewards_summary["points"] == 14 * 5 + 20 + 2 * 10  # two five-answer streak bonuses
 
 
 def test_validation_ownership_and_generation_failure(client, db, setup_quiz, monkeypatch):
@@ -214,8 +233,15 @@ def test_source_prompt_has_bounded_explanations_and_exercises():
                chunk_metadata={"content_type": "exercise" if i % 2 else "explanation"}) for i in range(60)]
     selected = quiz_generator.select_sources(sources)
     assert sum(map(len, selected.values())) <= quiz_generator.SOURCE_CHAR_BUDGET
-    assert 0 in selected and 1 in selected
+    assert 0 in selected and 1 not in selected
     assert all(text in sources[sid].text for sid, text in selected.items())
+
+
+def test_source_selection_excludes_existing_exercise_content():
+    sources = [SimpleNamespace(id=1, text="The lesson teaches habitats.", chunk_metadata={"content_type": "explanation"}),
+               SimpleNamespace(id=2, text="Which habitat is dry? A. Desert", chunk_metadata={"content_type": "exercise"})]
+    selected = quiz_generator.select_sources(sources)
+    assert selected == {1: "The lesson teaches habitats."}
 
 
 @pytest.mark.parametrize("recover", [False, True])

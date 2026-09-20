@@ -20,6 +20,7 @@ from app.schemas.quiz import AnswerSubmission
 from app.services.grading import public_question, save_answers
 from app.services.progress import accessible_lesson
 from app.services.scoring import is_passing
+from app.services import rewards
 
 router = APIRouter(tags=["generated-quiz"])
 
@@ -81,7 +82,8 @@ def start(lesson_id: int, payload: StartRequest, current_user: User = Depends(ge
     if existing:
         return public_run(db, existing)
     sources = [r for r in db.query(ContentChunk).filter_by(lesson_id=lesson_id, subject_id=lesson.subject_id).order_by(ContentChunk.id)
-               if not r.chunk_metadata.get("retired")]
+               if not (r.chunk_metadata or {}).get("retired")
+               and (r.chunk_metadata or {}).get("content_type") != "exercise"]
     if not lesson.is_published:
         raise HTTPException(409, "محتوى الدرس غير جاهز بعد.")
     previous = [q.body for r in runs for q, _ in bank(db, r)]
@@ -135,11 +137,21 @@ def submit(lesson_id: int, run_id: int, payload: SubmitRequest,
     results, breakdown = save_answers(db, current_user.id, payload.answers, questions,
                                      AttemptContext.practice if run.skill else AttemptContext.lesson_quiz)
     score = sum(r.is_correct for r in results) / len(results)
+    motivation_points = 20 if score >= 0.9 else 10 if score >= 0.8 else 0
     weakest = min(item.accuracy for item in breakdown)
     result = dict(score=score, correct=sum(r.is_correct for r in results), total=len(results),
                   results=[r.model_dump(mode="json") for r in results],
                   skill_breakdown=[b.model_dump(mode="json") for b in breakdown],
-                  weakest_skills=[b.skill_tag.value for b in breakdown if b.accuracy == weakest and weakest < 1])
+                  weakest_skills=[b.skill_tag.value for b in breakdown if b.accuracy == weakest and weakest < 1],
+                  motivation_points=motivation_points,
+                  motivation_message=("يا سلام! نتيجتك ٩٠٪ أو أكتر — ممتاز يا بطل! كسبت ٢٠ نقطة إضافية 🎉"
+                                      if score >= 0.9 else
+                                      "برافو! عديت ٨٠٪ — شاطر جدًا! كسبت ١٠ نقاط إضافية 👏"
+                                      if score >= 0.8 else
+                                      "كمّل المحاولة! راجع الإجابات وجرّب تاني 💪"))
+    if motivation_points:
+        rewards.award(db, rewards.locked_account(db, current_user.id),
+                      f"generated-quiz:{run.id}:motivation", "motivation", motivation_points)
     run.result = result
     if not run.skill:
         db.query(User).filter_by(id=current_user.id).with_for_update().one()

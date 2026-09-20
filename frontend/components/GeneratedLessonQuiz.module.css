@@ -31,6 +31,7 @@
 .dots button[aria-current] { outline: 2px solid var(--subject-color); outline-offset: 2px; }
 .score { display: block; font-size: 64px; color: var(--subject-ink); line-height: 1.2; }
 .notice { background: var(--subject-tint); color: var(--subject-ink); border-radius: 16px; padding: 16px; margin-block: 18px; line-height: 1.9; }
+.success { background: #e3f4df; color: #23633e; border: 1px solid #afd5b4; border-radius: 16px; padding: 16px; margin-block: 18px; line-height: 1.9; font-weight: 800; }
 .skills { display: grid; gap: 12px; margin-top: 20px; }
 .skill { border: 1px solid #dce2dc; border-radius: 18px; padding: 16px; }
 .skill progress { margin-block: 12px; }

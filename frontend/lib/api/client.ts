@@ -186,6 +186,7 @@ export type GeneratedQuizRun = {
   questions: { id: number; body: string; skill_tag: QuizSkill; options: Record<string, string> }[];
   result: null | {
     score: number; correct: number; total: number; weakest_skills: QuizSkill[];
+    motivation_points?: number; motivation_message?: string;
     skill_breakdown: { skill_tag: QuizSkill; correct: number; total: number; accuracy: number }[];
     results: { question_id: number; given_answer: string; correct_answer: string; is_correct: boolean; explanation: string; skill_tag: QuizSkill }[];
   };

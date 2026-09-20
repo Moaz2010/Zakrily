@@ -144,6 +144,7 @@ export function GeneratedLessonQuiz({ subject, lessonId }: { subject: string; le
           <span className={styles.eyebrow}>{run.skill ? "نتيجة التدريب" : `نتيجة المحاولة ${run.attempt}`}</span>
           <h2>أحسنت، خلّصت {run.skill ? "التدريب" : "الاختبار"}!</h2>
           <strong className={styles.score}>{Math.round(result.score * 100)}٪</strong><p>{result.correct} إجابات صحيحة من {result.total}</p>
+          <div className={result.motivation_points ? styles.success : styles.notice} role="status">{result.motivation_message ?? "كمّل المحاولة! راجع الإجابات وجرّب تاني 💪"}</div>
           {!run.skill && <div className={styles.notice}>{result.weakest_skills.length ? <><b>المهارات الأكثر احتياجًا للتدريب في المحاولة دي:</b><p>{result.weakest_skills.map(s => SKILLS[s]).join("، ")}</p></> : "ممتاز! جاوبت صح في كل المهارات. تقدر تتدرّب أكتر تحت."}</div>}
           <div className={styles.skills}>{result.skill_breakdown.map(item => <div key={item.skill_tag} className={styles.skill}>
             <div className={styles.row}><b>{SKILLS[item.skill_tag]}</b><span>{item.correct} / {item.total} · {Math.round(item.accuracy * 100)}٪</span></div>
