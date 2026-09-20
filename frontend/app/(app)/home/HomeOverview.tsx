@@ -1,5 +1,4 @@
 import { StudentHeader } from "@/components/StudentHeader";
-import { RewardsPanel } from "@/components/RewardsPanel";
 import { useLearner } from "@/lib/learner-context";
 import styles from "./home.module.css";
 
@@ -10,7 +9,6 @@ export function HomeOverview() {
   const max = Math.max(1, ...(stats?.week.map((day) => day.total) ?? []));
   return <>
     <StudentHeader />
-    <RewardsPanel compact />
     <section className={styles.activity} aria-labelledby="weekly-activity-title">
       <h2 id="weekly-activity-title">نشاط الأسبوع</h2>
       <p className="text-xs mb-3">عدد الإجابات في آخر ٧ أيام</p>
