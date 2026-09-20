@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.attempt import LessonStatus
 from app.models.lesson import Lesson
+from app.models.subject import Subject
 from app.models.user import User
 from app.schemas.lesson import LessonDetail
 from app.schemas.quiz import QuizOut
@@ -100,5 +101,15 @@ def get_lesson(lesson_id: int, current_user: User = Depends(get_current_user), d
 
 @router.get("/lessons/{lesson_id}/quiz", response_model=QuizOut)
 def get_quiz(lesson_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    accessible_lesson(db, current_user.id, lesson_id)
-    return QuizOut(questions=[public_question(q, tag) for q, tag in approved_questions(db, lesson_id=lesson_id)])
+    lesson = accessible_lesson(db, current_user.id, lesson_id)
+    questions = approved_questions(db, lesson_id=lesson_id)
+    # A fresh deployment may have the lesson content but not the separately
+    # imported English exercise rows. Populate Lesson 1 from its checked-in
+    # source on the first quiz request so the exercise screen is never empty.
+    subject = db.get(Subject, lesson.subject_id)
+    if not questions and lesson.order_index == 1 and subject and subject.slug.value == "english":
+        from scripts.import_english_questions import publish
+        publish(db, lesson)
+        db.commit()
+        questions = approved_questions(db, lesson_id=lesson_id)
+    return QuizOut(questions=[public_question(q, tag) for q, tag in questions])

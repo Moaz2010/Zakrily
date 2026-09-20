@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, ReactNode } from "react";
 import { lessonsApi } from "@/lib/api";
 import { useLearner } from "@/lib/learner-context";
+import { PronunciationButton } from "./PronunciationButton";
 import styles from "./ScienceLearn.module.css";
 
 interface Section {
@@ -30,20 +31,28 @@ function inline(text: string): ReactNode {
   );
 }
 
-function FormattedContent({ text }: { text: string }) {
+function englishPhrase(text: string): string | null {
+  const matches = text.match(/[A-Za-z][A-Za-z0-9'’]*(?:\s+[A-Za-z][A-Za-z0-9'’]*)*/g) ?? [];
+  return matches.sort((a, b) => b.length - a.length)[0]?.trim() || null;
+}
+
+function FormattedContent({ text, subject, lessonId }: { text: string; subject: string; lessonId: number }) {
   const lines = clean(text).split("\n").filter((l) => l.trim());
   return (
     <div className={styles.source}>
       {lines.map((line, idx) => {
         if (/^\|[- |]+\|$/.test(line)) return null;
         if (line.startsWith("|")) {
-          return (
-            <div className={styles.tableRow} key={idx}>
+            return (
+              <div className={styles.tableRow} key={idx}>
               {line
                 .split("|")
                 .filter((c) => c.trim())
                 .map((cell, i) => (
-                  <span key={i}>{inline(cell.trim())}</span>
+                  <span key={i}>
+                    {inline(cell.trim())}
+                    {subject === "english" && englishPhrase(cell) && <PronunciationButton lessonId={lessonId} text={englishPhrase(cell)!} />}
+                  </span>
                 ))}
             </div>
           );
@@ -52,7 +61,10 @@ function FormattedContent({ text }: { text: string }) {
         return (
           <p className={bullet ? styles.bullet : undefined} key={idx}>
             {bullet && <span aria-hidden="true">✦</span>}
-            <span>{inline(line.replace(/^(?:### |\* |\d+\. |- )/, ""))}</span>
+            <span>
+              {inline(line.replace(/^(?:### |\* |\d+\. |- )/, ""))}
+              {subject === "english" && englishPhrase(line) && <PronunciationButton lessonId={lessonId} text={englishPhrase(line)!} />}
+            </span>
           </p>
         );
       })}
@@ -64,10 +76,12 @@ const ICONS = ["🌱", "💡", "🔍", "📚", "⭐", "🎯", "🧠", "✨", "�
 
 export function GenericLearn({
   lessonId,
+  subject,
   sections,
   onCompletePractice,
 }: {
   lessonId: number;
+  subject: string;
   sections: Section[];
   onCompletePractice?: () => void;
 }) {
@@ -80,8 +94,9 @@ export function GenericLearn({
 
     paragraphs.forEach((para, pIdx) => {
       // If a paragraph is still long, split by sentences
-      if (para.length > 180 && !para.includes("\n")) {
-        const sentences = para.split(/(?<=[.!?])\s+/);
+      const normalized = para.replace(/^>\s?/gm, "").trim();
+      if (normalized.length > 180 && !normalized.includes("|")) {
+        const sentences = normalized.replace(/\s*\n\s*/g, " ").split(/(?<=[.!?])\s+/);
         let currentSentences: string[] = [];
         sentences.forEach((sent, sentIdx) => {
           currentSentences.push(sent);
@@ -100,7 +115,7 @@ export function GenericLearn({
         cards.push({
           id: `card-${sec.id}-${pIdx}`,
           heading: sec.heading,
-          content: para,
+          content: normalized,
           icon,
           badge: `فكرة ${cards.length + 1} | CONCEPT ${cards.length + 1}`,
         });
@@ -200,7 +215,7 @@ export function GenericLearn({
               </div>
             </div>
             <div className={styles.cardContentBody}>
-              <FormattedContent text={currentCard.content} />
+              <FormattedContent text={currentCard.content} subject={subject} lessonId={lessonId} />
             </div>
           </div>
         ) : (

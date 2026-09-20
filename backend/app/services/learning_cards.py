@@ -32,9 +32,10 @@ def card_count(db, lesson):
     total = 0
     for section in lesson.sections:
         for paragraph in paragraphs(section.body_md):
-            if len(paragraph) > 180 and "\n" not in paragraph:
+            normalized = re.sub(r"^>\s?", "", paragraph, flags=re.M).strip()
+            if len(normalized) > 180 and "|" not in normalized:
                 pending = []
-                sentences = re.split(r"(?<=[.!?])\s+", paragraph)
+                sentences = re.split(r"(?<=[.!?])\s+", re.sub(r"\s*\n\s*", " ", normalized))
                 for index, sentence in enumerate(sentences):
                     pending.append(sentence)
                     if len(" ".join(pending)) > 120 or index == len(sentences) - 1:

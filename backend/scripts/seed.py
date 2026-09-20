@@ -52,6 +52,10 @@ def run():
                     ))
 
         db.commit()
+        # Publish the approved English Lesson 1 exercises from the source file
+        # during the normal seed flow, so a fresh deployment has questions.
+        from scripts.import_english_questions import run as import_english_questions
+        import_english_questions()
         print("Seeded subjects, 16 Unit 1 lessons, and skill tags.")
     finally:
         db.close()

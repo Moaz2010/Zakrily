@@ -131,40 +131,47 @@ def extract_items(text: str) -> list[dict]:
     return items
 
 
+def publish(db, lesson, items=None):
+    """Upsert the source exercises into an existing database session."""
+    from app.models.question import Question, QuestionType, ReviewStatus, SkillTag
+
+    items = items or extract_items(SOURCE.read_text(encoding="utf-8"))
+    if not items:
+        raise ValueError("No English Lesson 1 exercises were found")
+    tags = {tag.slug.value: tag.id for tag in db.query(SkillTag)}
+    existing = {
+        (question.grading_data or {}).get("source_key"): question
+        for question in db.query(Question).filter_by(lesson_id=lesson.id)
+    }
+    for item in items:
+        question = existing.get(item["source_key"])
+        if question is None:
+            question = Question(lesson_id=lesson.id)
+            db.add(question)
+        question.skill_tag_id = tags[item["skill"]]
+        question.qtype = QuestionType(item["qtype"])
+        question.body = item["body"]
+        question.options = item["options"]
+        question.correct_answer = item["correct_answer"]
+        question.explanation = f"{item['skill_label']}. {item['explanation']}".strip()
+        question.grading_data = {"number": item["number"], "scored": item["scored"], "source_key": item["source_key"]}
+        if item["qtype"] == "short_answer" and item["scored"]:
+            question.grading_data["accepted"] = [item["correct_answer"]]
+        question.review_status = ReviewStatus.approved
+    lesson.is_published = True
+    return len(items)
+
+
 def run():
     from app.core.database import SessionLocal
     from app.models.lesson import Lesson
-    from app.models.question import Question, QuestionType, ReviewStatus, SkillTag
     from app.models.subject import Subject
 
-    items = extract_items(SOURCE.read_text(encoding="utf-8"))
-    if not items:
-        raise ValueError("No English Lesson 1 exercises were found")
     with SessionLocal() as db:
         lesson = db.query(Lesson).join(Subject).filter(Subject.slug == "english", Lesson.order_index == 1).one()
-        tags = {tag.slug.value: tag.id for tag in db.query(SkillTag)}
-        existing = {
-            (question.grading_data or {}).get("source_key"): question
-            for question in db.query(Question).filter_by(lesson_id=lesson.id)
-        }
-        for item in items:
-            question = existing.get(item["source_key"])
-            if question is None:
-                question = Question(lesson_id=lesson.id)
-                db.add(question)
-            question.skill_tag_id = tags[item["skill"]]
-            question.qtype = QuestionType(item["qtype"])
-            question.body = item["body"]
-            question.options = item["options"]
-            question.correct_answer = item["correct_answer"]
-            question.explanation = f"{item['skill_label']}. {item['explanation']}".strip()
-            question.grading_data = {"number": item["number"], "scored": item["scored"], "source_key": item["source_key"]}
-            if item["qtype"] == "short_answer" and item["scored"]:
-                question.grading_data["accepted"] = [item["correct_answer"]]
-            question.review_status = ReviewStatus.approved
-        lesson.is_published = True
+        count = publish(db, lesson)
         db.commit()
-        print(f"Published {len(items)} skill-tagged questions for English Lesson 1 (id={lesson.id}).")
+        print(f"Published {count} skill-tagged questions for English Lesson 1 (id={lesson.id}).")
 
 
 if __name__ == "__main__":
