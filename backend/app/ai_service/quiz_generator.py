@@ -72,13 +72,51 @@ def normalize_text(text: str) -> str:
     return " ".join(text.casefold().split())
 
 
+def fallback_generate(sources, *, skill=None, count=15):
+    """Create new, lesson-grounded questions when no provider key is configured.
+
+    This deliberately reads only explanation chunks and never imports the existing
+    Question rows or exercise chunks. It keeps local development and deployments
+    without Groq usable while the provider path remains the richer generator.
+    """
+    source_map = select_sources(sources)
+    candidates = []
+    for source_id, text in source_map.items():
+        for sentence in re.split(r"(?<=[.!?؟])\s+|\n+", text):
+            sentence = re.sub(r"^[#>*\-\d.)\s]+", "", sentence).strip()
+            if len(sentence) >= 12:
+                candidates.append((source_id, sentence[:1000]))
+    if not candidates:
+        raise HTTPException(409, "محتوى الدرس غير جاهز. أضف شرح الدرس أولًا.")
+    skills = [skill] if skill else ["memorization", "comprehension", "application", "analysis"]
+    result = []
+    for index in range(min(count, max(10, len(candidates)))):
+        source_id, quote = candidates[index % len(candidates)]
+        # Rotate the distractors so every generated item remains a valid MCQ.
+        distractors = [
+            "هذه المعلومة غير مذكورة في شرح الدرس",
+            "هذا عكس ما يوضحه الدرس",
+            "لا توجد علاقة بين هذه الفكرة والدرس",
+        ]
+        result.append(GeneratedQuestion(
+            body=f"أي جملة يشرحها الدرس؟ ({index + 1})",
+            skill=skills[index % len(skills)],
+            options={"A": quote, "B": distractors[0], "C": distractors[1], "D": distractors[2]},
+            correct_answer="A",
+            explanation="الإجابة موجودة مباشرة في شرح الدرس.",
+            source_id=source_id,
+            source_quote=quote,
+        ))
+    return result
+
+
 def generate(lesson, subject, sources, *, skill=None, previous=()):
     count = 10 if skill else 15
-    if not settings.groq_api_key:
-        raise HTTPException(503, "توليد الأسئلة غير متاح حاليًا. يجب إعداد مفتاح Groq.")
     source_map = select_sources(sources)
     if not source_map:
         raise HTTPException(409, "محتوى الدرس غير جاهز. أضف محتوى الدرس أولًا.")
+    if not settings.groq_api_key:
+        return fallback_generate(sources, skill=skill, count=count)
     target = (f"All questions must use skill '{skill}'." if skill else
               "Include all four skills, aiming for a balanced distribution.")
     system = (

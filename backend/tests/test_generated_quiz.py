@@ -176,15 +176,29 @@ def test_provider_validation(db, setup_quiz, monkeypatch, fault):
         factory.return_value.__enter__.return_value.post.side_effect = httpx.ReadTimeout("timeout")
     monkeypatch.setattr(quiz_generator.httpx, "Client", factory)
     monkeypatch.setattr(quiz_generator.settings, "groq_api_key", "" if fault == "missing_key" else "test-only")
-    if fault in {"provider", "timeout", "missing_key"}:
+    if fault in {"provider", "timeout"}:
         with pytest.raises(HTTPException) as error:
             quiz_generator.generate(lesson, subject, sources)
         assert error.value.status_code == 503
+    elif fault == "missing_key":
+        assert len(quiz_generator.generate(lesson, subject, sources)) >= 10
     else:
         expected_count = 14 if fault in {"count", "citation", "quote", "duplicate", "answer"} else 15
         assert len(quiz_generator.generate(lesson, subject, sources)) == expected_count
         sent = factory.return_value.__enter__.return_value.post.call_args.kwargs["json"]
         assert sent["response_format"] == {"type": "json_object"}
+
+
+def test_missing_provider_key_generates_new_questions_from_explanations(db, setup_quiz, monkeypatch):
+    lesson, _, _ = setup_quiz
+    sources = db.query(ContentChunk).filter_by(lesson_id=lesson.id).all()
+    subject = db.get(Subject, lesson.subject_id)
+    monkeypatch.setattr(quiz_generator.settings, "groq_api_key", "")
+    result = quiz_generator.generate(lesson, subject, sources)
+    assert len(result) >= 10
+    assert len({q.body for q in result}) == len(result)
+    assert all(q.source_id for q in result)
+    assert all(q.correct_answer == "A" for q in result)
 
 
 @pytest.mark.parametrize("count", [10, 16, 20, 35])
