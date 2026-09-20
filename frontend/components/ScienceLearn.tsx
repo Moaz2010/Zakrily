@@ -252,7 +252,7 @@ export function ScienceLearn({
   onProgress?: () => void;
 }) {
   const [step, setStep] = useState(0);
-  const { refresh } = useLearner();
+  const { user, rewards, refresh } = useLearner();
   const [learned, setLearned] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -288,7 +288,7 @@ export function ScienceLearn({
     setSaveError("");
     let localLearned: number[] = [];
     try {
-      const raw = localStorage.getItem(`zakrely_learned_${lessonId}`);
+      const raw = localStorage.getItem(`zakrely_learned_${user.id}_${lessonId}`);
       if (raw) localLearned = JSON.parse(raw);
     } catch {}
 
@@ -336,7 +336,7 @@ export function ScienceLearn({
     setLearned(newLearned);
 
     try {
-      localStorage.setItem(`zakrely_learned_${lessonId}`, JSON.stringify(newLearned));
+      localStorage.setItem(`zakrely_learned_${user.id}_${lessonId}`, JSON.stringify(newLearned));
     } catch {}
 
     if (step < TOTAL_CARDS - 1) {
@@ -357,7 +357,7 @@ export function ScienceLearn({
       <div className={styles.learnContainer} dir="ltr" lang="en" aria-label="Explore Science Lesson 2">
         <header className={styles.duoHeader}>
           <div className={styles.headerLeft} dir="rtl">
-            <span className={styles.duoBadge}>🌟 نقاط +{learned.length * 10}</span>
+            <span className={styles.duoBadge}>🌟 نقاط +{rewards?.points ?? 0}</span>
             <span className={styles.stepCount}>
               بطاقة {isFinished ? LESSON_2_TOTAL_CARDS : step + 1} من {LESSON_2_TOTAL_CARDS}
             </span>
@@ -616,7 +616,7 @@ export function ScienceLearn({
         {/* Duolingo Arabic Header Bar */}
         <header className={styles.duoHeader}>
           <div className={styles.headerLeft} dir="rtl">
-            <span className={styles.duoBadge}>🌟 نقاط +{learned.length * 10}</span>
+            <span className={styles.duoBadge}>🌟 نقاط +{rewards?.points ?? 0}</span>
             <span className={styles.stepCount}>
               بطاقة {isFinished ? TOTAL_CARDS : step + 1} من {TOTAL_CARDS}
             </span>
@@ -699,7 +699,7 @@ export function ScienceLearn({
       {/* Duolingo Arabic Header Bar */}
       <header className={styles.duoHeader}>
         <div className={styles.headerLeft} dir="rtl">
-          <span className={styles.duoBadge}>🌟 نقاط +{learned.length * 10}</span>
+          <span className={styles.duoBadge}>🌟 نقاط +{rewards?.points ?? 0}</span>
           <span className={styles.stepCount}>
             بطاقة {step >= TOTAL_CARDS ? TOTAL_CARDS : step + 1} من {TOTAL_CARDS}
           </span>

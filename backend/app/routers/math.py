@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.subject import Subject, SubjectSlug
 from app.services.progress import accessible_lesson
-from app.services.grading import approved_questions, answer_matches
+from app.services.grading import approved_questions, save_answers
+from app.models.attempt import AttemptContext
 
 
 class MathCheckRequest(BaseModel):
@@ -31,7 +32,10 @@ def check_answer(lesson_id: int, payload: MathCheckRequest,
                      if q.id == payload.question_id), None)
     if question is None or not payload.answer.strip():
         raise HTTPException(422, "اختار سؤال من الدرس واكتب إجابتك.")
-    return {"is_correct": answer_matches(question, payload.answer),
+    bank = [(q, tag) for q, tag in approved_questions(db, lesson_id=lesson_id) if q.id == question.id]
+    results, _ = save_answers(db, current_user.id, [payload], bank, AttemptContext.practice)
+    db.commit()
+    return {"is_correct": results[0].is_correct,
             "correct_answer": question.correct_answer, "explanation": question.explanation}
 
 

@@ -75,8 +75,16 @@ def explain(lesson_id: int, question: str, history: list[dict], *, db: Session |
             [*history[-10:], {"role": "user", "content": question}],
             max_tokens=2400, model=model,
         )
-    except providers.ProviderError:
-        logging.getLogger(__name__).warning("Lesson explanation unavailable via %s", chosen)
+    except providers.ProviderError as exc:
+        # A 401/403 almost always means the configured key is missing or
+        # revoked, so name the setting to check rather than just "unavailable".
+        message = str(exc)
+        if "401" in message or "403" in message:
+            hint = f"Check {chosen.upper()}_API_KEY in backend/.env"
+        else:
+            hint = f"Check {chosen} availability and model configuration"
+        logging.getLogger(__name__).warning(
+            "Lesson explanation unavailable via %s. %s", chosen, hint)
         return fallback
 
 

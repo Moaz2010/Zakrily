@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useRef, ReactNode } from "react";
+import { useEffect, useState, useRef, ReactNode } from "react";
+import { lessonsApi } from "@/lib/api";
+import { useLearner } from "@/lib/learner-context";
 import styles from "./ScienceLearn.module.css";
 
 interface Section {
@@ -61,9 +63,11 @@ function FormattedContent({ text }: { text: string }) {
 const ICONS = ["🌱", "💡", "🔍", "📚", "⭐", "🎯", "🧠", "✨", "🚀"];
 
 export function GenericLearn({
+  lessonId,
   sections,
   onCompletePractice,
 }: {
+  lessonId: number;
   sections: Section[];
   onCompletePractice?: () => void;
 }) {
@@ -105,10 +109,39 @@ export function GenericLearn({
   });
 
   const [step, setStep] = useState(0);
+  const { rewards, refresh } = useLearner();
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [ready, setReady] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const total = cards.length;
   const currentCard = cards[step];
   const isFinished = step === total;
+
+  useEffect(() => {
+    let active = true;
+    lessonsApi.learning(lessonId).then((saved) => {
+      if (!active) return;
+      setStep(Math.min(saved.learned_steps.length, total));
+      setReady(true);
+    }).catch(() => {
+      if (active) { setReady(true); setSaveError("تعذر استرجاع التقدم. يمكنك المحاولة بالبطاقة الحالية."); }
+    });
+    return () => { active = false; };
+  }, [lessonId, total]);
+
+  async function advance() {
+    if (saving || !ready) return;
+    setSaving(true);
+    try {
+      await lessonsApi.saveLearning(lessonId, [step]);
+      setSaveError("");
+      go(step + 1);
+      void refresh();
+    } catch {
+      setSaveError("تعذر حفظ البطاقة والنقاط. اضغط التالي للمحاولة مرة أخرى.");
+    } finally { setSaving(false); }
+  }
 
   function go(nextStep: number) {
     setStep(nextStep);
@@ -132,7 +165,7 @@ export function GenericLearn({
       {/* Duolingo Header Bar with Arabic labels */}
       <header className={styles.duoHeader}>
         <div className={styles.headerLeft} dir="rtl">
-          <span className={styles.duoBadge}>⭐ نقاط +10</span>
+          <span className={styles.duoBadge}>⭐ نقاط {rewards?.points ?? 0}</span>
           <span className={styles.stepCount}>
             بطاقة {isFinished ? total : step + 1} من {total}
           </span>
@@ -181,13 +214,15 @@ export function GenericLearn({
         )}
       </main>
 
+      {saveError && <p role="alert">{saveError}</p>}
       {/* Duolingo Arabic Action Footer */}
       <footer className={styles.duoFooter} dir="rtl">
         {!isFinished ? (
           <button
             type="button"
             className={styles.duoBtnNext}
-            onClick={() => go(step + 1)}
+            onClick={() => void advance()}
+            disabled={saving || !ready}
           >
             التالي ←
           </button>
@@ -203,7 +238,7 @@ export function GenericLearn({
         <button
           type="button"
           className={styles.duoBtnBack}
-          disabled={step === 0}
+          disabled={step === 0 || saving || !ready}
           onClick={() => go(step - 1)}
         >
           السابق →

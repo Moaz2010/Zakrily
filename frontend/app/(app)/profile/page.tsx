@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { percentage, StatsStatus, useLearner } from "@/lib/learner-context";
 import styles from "./profile.module.css";
+import { RewardsPanel } from "@/components/RewardsPanel";
 
 export default function ProfilePage() {
   const { user, stats, signOut } = useLearner();
@@ -25,6 +26,7 @@ export default function ProfilePage() {
     </header>
     <section className={styles.content} aria-label="إحصائيات الدراسة">
       <StatsStatus />
+      <RewardsPanel />
       <div className={styles.stats} dir="ltr">
         <div className={styles.accuracy} dir="rtl"><h2>متوسط الدقة</h2><strong>{percentage(stats?.accuracy)}</strong></div>
         <div className={styles.streak} aria-label={`سلسلة الدراسة: ${stats?.streak_days ?? "—"} يومًا`}><span className={styles.flame} aria-hidden="true">🔥</span><strong>{stats?.streak_days ?? "—"}</strong><div className={styles.mom}><img src="/mom-timer.png" alt="ماما بتشجعك تستمر" width={112} height={119} /></div><span className={styles.star} aria-hidden="true">★</span></div>

@@ -1,0 +1,40 @@
+.control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+  margin-inline-start: 6px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid #b9cedf;
+  border-radius: 50%;
+  color: #2a4a6b;
+  background: #edf5fb;
+  cursor: pointer;
+}
+
+.button:hover,
+.button[aria-pressed="true"] {
+  background: #2a4a6b;
+  color: white;
+}
+
+.button:focus-visible {
+  outline: 3px solid #597b96;
+  outline-offset: 3px;
+}
+
+.error {
+  max-width: 230px;
+  color: #9b2525;
+  font-size: 12px;
+  font-weight: 500;
+}

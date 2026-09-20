@@ -1,6 +1,8 @@
 .widget { position: fixed; bottom: calc(92px + env(safe-area-inset-bottom)); left: max(18px, calc((100vw - 430px) / 2 + 18px)); z-index: 45; color: #292c32; }
 .launcher { position: relative; display: grid; place-items: center; width: 62px; height: 62px; border: 3px solid white; border-radius: 50%; background: var(--chat-color); color: white; box-shadow: 0 5px 22px #203b3933; cursor: pointer; transition: transform .2s; }
-.launcher:hover { transform: translateY(-3px); }
+.launcher { touch-action: none; user-select: none; cursor: grab; }
+.launcher[data-dragging="true"] { cursor: grabbing; }
+.launcher img { pointer-events: none; -webkit-user-drag: none; }
 .launcher img { border-radius: 50%; object-fit: cover; object-position: center top; }
 .badge { position: absolute; right: -3px; top: -3px; display: grid; place-items: center; width: 22px; height: 22px; border: 2px solid white; border-radius: 50%; background: #f4d995; color: #6a4d26; }
 .tooltip { position: absolute; left: 72px; white-space: nowrap; padding: 7px 12px; border-radius: 14px; background: white; color: var(--chat-color); box-shadow: 0 3px 14px #203b3917; font-size: 12px; font-weight: 800; }

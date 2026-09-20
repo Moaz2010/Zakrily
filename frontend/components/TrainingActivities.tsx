@@ -74,6 +74,14 @@ export function TrainingActivities({
           </li>
         ))}
       </ol>
+      <Link href={`${base}/generated-quiz`} className={`${styles.card} ${styles.generated}`}>
+        <Pattern />
+        <h3>اختبر نفسك ✨</h3>
+        <div className={styles.quizFooter}>
+          <p>١٥ سؤال من الدرس · ٣ محاولات<br />اعرف مهاراتك ودرّب كل مهارة بـ١٠ أسئلة</p>
+          <Arrow />
+        </div>
+      </Link>
       <Link href={`${base}/quiz`} className={`${styles.card} ${styles.quiz}`}>
         <Pattern />
         <h3>اختبار</h3>

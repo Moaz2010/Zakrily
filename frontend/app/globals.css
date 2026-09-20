@@ -33,6 +33,7 @@
 body {
   background: var(--color-bg);
   color: var(--color-text);
+  font-family: Arial, Tahoma, sans-serif;
   /* Mobile-first — simulate phone container */
   min-height: 100svh;
 }

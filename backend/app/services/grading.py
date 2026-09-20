@@ -13,6 +13,7 @@ from app.models.question import Question, QuestionType, ReviewStatus, SkillTag, 
 from app.schemas.quiz import QuestionPublic, QuestionResult, SkillBreakdownItem
 from app.services.scoring import has_sufficient_data
 from app.services.answer_ideas import matches_ideas
+from app.services import rewards
 
 
 def approved_questions(db: Session, lesson_id: int | None = None, subject_id: int | None = None, include_unscored: bool = False, exclude_comprehension: bool = False):
@@ -61,10 +62,12 @@ def save_answers(db: Session, user_id: int, answers, questions, context: Attempt
     if not ids or len(ids) != len(set(ids)) or any(qid not in by_id for qid in ids):
         raise HTTPException(422, "Submit unique, approved questions from this activity")
     results = []
+    reward_account = rewards.locked_account(db, user_id)
     totals = defaultdict(lambda: [0, 0])
     for answer in answers:
         question, tag = by_id[answer.question_id]
         correct = answer_matches(question, answer.answer)
+        rewards.answer_reward(db, reward_account, question.id, correct)
         db.add(Attempt(user_id=user_id, question_id=question.id, given_answer=answer.answer,
                        is_correct=correct, context=context))
         totals[tag.slug.value][0] += int(correct)

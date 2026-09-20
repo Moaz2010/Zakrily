@@ -24,8 +24,46 @@ export function LessonChat({ lessonId, subject, lessonTitle }: {
   const sending = useRef(false);
   const input = useRef<HTMLInputElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const [dragging, setDragging] = useState(false);
+  const drag = useRef<{ id: number; x: number; y: number; left: number; top: number } | null>(null);
+  const moved = useRef(false);
   const log = useRef<HTMLDivElement>(null);
   const mounted = useRef(true);
+
+  function clampPosition(x: number, y: number) {
+    const width = launcher.current?.offsetWidth ?? 62;
+    const height = launcher.current?.offsetHeight ?? 62;
+    return {
+      x: Math.max(8, Math.min(x, window.innerWidth - width - 8)),
+      y: Math.max(8, Math.min(y, window.innerHeight - height - 8)),
+    };
+  }
+
+  useEffect(() => {
+    function resize() {
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+      setPosition((previous) => previous ? clampPosition(previous.x, previous.y) : null);
+    }
+    resize();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+
+  // Keep the conversation visible even when its launcher is dragged to an edge.
+  const panelWidth = Math.min(380, viewport.width - 36);
+  const panelHeight = Math.min(570, viewport.height - 110);
+  const panelStyle: CSSProperties | undefined = position ? {
+    position: "fixed",
+    left: Math.max(18, Math.min(position.x, viewport.width - panelWidth - 18)),
+    top: Math.max(8, Math.min(
+      position.y >= panelHeight + 22 ? position.y - panelHeight - 14 : position.y + 76,
+      viewport.height - panelHeight - 8,
+    )),
+    bottom: "auto",
+    height: panelHeight,
+  } : undefined;
 
   useEffect(() => {
     mounted.current = true;
@@ -105,8 +143,8 @@ export function LessonChat({ lessonId, subject, lessonTitle }: {
     void send(question);
   }
 
-  return <div className={styles.widget} dir="rtl" style={{ "--chat-color": COLORS[subject] ?? COLORS.science } as CSSProperties}>
-    {open && <section id="lesson-chat" className={styles.panel} role="dialog" aria-labelledby="lesson-chat-title" onKeyDown={(event) => {
+  return <div className={styles.widget} dir="rtl" style={{ "--chat-color": COLORS[subject] ?? COLORS.science, ...(position ? { left: position.x, top: position.y, bottom: "auto" } : {}) } as CSSProperties}>
+    {open && <section id="lesson-chat" className={styles.panel} style={panelStyle} role="dialog" aria-labelledby="lesson-chat-title" onKeyDown={(event) => {
       if (event.key === "Escape") { event.stopPropagation(); close(); }
     }}>
       <header className={styles.header}>
@@ -147,9 +185,47 @@ export function LessonChat({ lessonId, subject, lessonTitle }: {
         <small>الشرح من محتوى الدرس • راجع إجابتك مع الكتاب</small>
       </form>
     </section>}
-    <button ref={launcher} type="button" className={styles.launcher} aria-expanded={open} aria-controls={open ? "lesson-chat" : undefined} aria-label={open ? "إغلاق نُوّارة" : "اسأل نُوّارة عن الدرس"} onClick={() => open ? close() : setOpen(true)}>
+    <button ref={launcher} type="button" className={styles.launcher} data-dragging={dragging} aria-expanded={open} aria-controls={open ? "lesson-chat" : undefined} aria-label={open ? "إغلاق نُوّارة" : "اسأل نُوّارة عن الدرس"}
+      title="اسحب لتحريك نُوّارة، أو استخدم مفاتيح الأسهم"
+      onPointerDown={(event) => {
+        if (!event.isPrimary || event.button !== 0) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
+        moved.current = false;
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        const start = drag.current;
+        if (!start || start.id !== event.pointerId) return;
+        const dx = event.clientX - start.x;
+        const dy = event.clientY - start.y;
+        if (!moved.current && Math.hypot(dx, dy) < 6) return;
+        moved.current = true;
+        setDragging(true);
+        setPosition(clampPosition(start.left + dx, start.top + dy));
+      }}
+      onPointerUp={(event) => {
+        if (drag.current?.id !== event.pointerId) return;
+        drag.current = null;
+        setDragging(false);
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }}
+      onPointerCancel={() => { drag.current = null; moved.current = true; setDragging(false); }}
+      onLostPointerCapture={() => { drag.current = null; setDragging(false); }}
+      onKeyDown={(event) => {
+        const offsets: Record<string, [number, number]> = { ArrowLeft: [-16, 0], ArrowRight: [16, 0], ArrowUp: [0, -16], ArrowDown: [0, 16] };
+        const offset = offsets[event.key];
+        if (!offset) return;
+        event.preventDefault();
+        const rect = event.currentTarget.getBoundingClientRect();
+        setPosition(clampPosition(rect.left + offset[0], rect.top + offset[1]));
+      }}
+      onClick={(event) => {
+        if (moved.current && event.detail !== 0) { moved.current = false; return; }
+        open ? close() : setOpen(true);
+      }}>
       {open ? <span className={styles.launcherClose} aria-hidden="true">×</span> : <><img src="/nawwara.jpeg" alt="" width={48} height={48} /><span className={styles.badge} aria-hidden="true">✦</span></>}
-      {!open && <span className={styles.tooltip}>اسأل نُوّارة</span>}
+      {!open && <span className={styles.tooltip} style={position && position.x > viewport.width - 200 ? { left: "auto", right: 72 } : undefined}>اسأل نُوّارة</span>}
     </button>
   </div>;
 }

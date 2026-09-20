@@ -40,13 +40,45 @@ cd backend
 python -m venv .venv
 source .venv/Scripts/activate   # Windows Git Bash; use .venv/bin/activate on macOS/Linux
 pip install -r requirements.txt
-cp .env.example .env            # fill in Supabase + JWT + Anthropic values
+cp .env.example .env            # fill in Supabase + JWT + AI keys (GROQ_API_KEY for chat)
 alembic upgrade head
 python -m scripts.seed
+python -m scripts.ingest --all
 uvicorn app.main:app --reload --port 8000
 ```
 
 Run tests: `pytest`
+
+Lesson chat requires ingested content and a valid `GROQ_API_KEY`. After changing
+the key in `backend/.env`, restart the backend. If Groq rejects the key, the
+backend logs HTTP 401 and chat falls back to lesson excerpts. Rerun
+`python -m scripts.ingest --all` after updating lesson sources or the embedding
+version to refresh the index.
+
+### Generated lesson quizzes
+
+Every lesson's exercise section includes **اختبر نفسك**. It generates a saved
+15-question multiple-choice quiz using the same Groq key/model as lesson chat.
+Questions follow that lesson's source topics, language and difficulty, with four
+memorization, four comprehension, four application and three analysis questions.
+The backend validates the question count, options, skill distribution and cited
+source excerpts before saving the quiz. Answers remain server-side until submission.
+
+Each learner has three quiz slots per lesson. Starting successfully uses a slot;
+reopening resumes that slot, and failed generation uses none. Submission is
+idempotent, contributes to skill statistics, and retains the best lesson score.
+Passing uses the existing lesson completion threshold. Results show corrections
+and the lowest-scoring skills for that attempt; a perfect score has no weak skill.
+Each completed quiz offers one saved 10-question practice set per skill. Practice
+does not consume quiz attempts or change the best quiz score. Unsubmitted choices
+are saved on the current browser/device; quizzes and results are stored server-side.
+
+For existing installs, run `python -m alembic upgrade head` from `backend/` and
+restart the backend. Quiz generation needs a valid `GROQ_API_KEY`; a rejected key
+produces an actionable error and does not consume an attempt. The generator uses
+[Groq JSON mode](https://console.groq.com/docs/structured-outputs) with server-side
+schema validation. Run its regression tests with
+`python -m pytest tests/test_generated_quiz.py -q`.
 
 ### 3. Frontend
 

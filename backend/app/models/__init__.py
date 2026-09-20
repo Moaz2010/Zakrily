@@ -6,8 +6,11 @@ from app.models.question import SkillTag, Question
 from app.models.attempt import Attempt, SkillScore, LessonProgress
 from app.models.chat import ChatSession, ChatMessage
 from app.models.math_submission import MathSubmission
+from app.models.generated_quiz import GeneratedQuiz
+from app.models.reward import RewardAccount, RewardEvent
 
 __all__ = [
+    "RewardAccount", "RewardEvent",
     "User",
     "Subject",
     "Lesson",
@@ -21,4 +24,5 @@ __all__ = [
     "ChatSession",
     "ChatMessage",
     "MathSubmission",
+    "GeneratedQuiz",
 ]

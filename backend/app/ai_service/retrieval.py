@@ -42,18 +42,23 @@ def retrieve(query: str, lesson_id: int, k: int = 5, *,
         ContentChunk.subject_id == Subject.id,
         Lesson.is_published.is_(True),
         ContentChunk.chunk_metadata["content_type"].as_string() == kind,
-        ContentChunk.chunk_metadata["embedding_model"].as_string() == EMBEDDING_MODEL,
+        ContentChunk.chunk_metadata["embedding_model"].as_string().in_(
+            [EMBEDDING_MODEL, "lexical-hash-v1"]
+        ),
     )
     number = re.search(r"(?:\bquestion|\bq\.?|السؤال|سؤال)\s*(?:number|رقم)?\s*(\d+)", query, re.IGNORECASE)
     if number and kind == "exercise":
         rows = rows.filter(ContentChunk.chunk_metadata["question_number"].as_integer() == int(number[1]))
     vector = embed(query)
-    if db.get_bind().dialect.name == "postgresql":
-        rows = rows.order_by(ContentChunk.embedding.cosine_distance(vector), ContentChunk.id)
     candidates = [row for row in rows.all() if not row.chunk_metadata.get("retired")]
-    ranked = sorted(candidates, key=lambda row: (
-        sum(float(a) * b for a, b in zip(row.embedding, vector)), -row.id,
-    ), reverse=True)
+    # Older local indexes remain searchable until ingestion is rerun. Re-embed
+    # their text in memory: vectors from different versions cannot be compared.
+    def score(row):
+        embedding = (row.embedding if row.chunk_metadata.get("embedding_model") == EMBEDDING_MODEL
+                     else embed(row.text))
+        return sum(float(a) * b for a, b in zip(embedding, vector)), -row.id
+
+    ranked = sorted(candidates, key=score, reverse=True)
     query_tokens = set(tokens(query))
     general = bool(re.search(r"\b(lesson|summary|summarize|overview|revise|practice|exercises)\b|الدرس|ملخص|اشرح|تدريبات", query, re.I))
     ranked = [row for row in ranked if number or general or query_tokens.intersection(tokens(row.text))]

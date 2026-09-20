@@ -150,9 +150,46 @@ def test_gemini_tts_synthesize_returns_list(monkeypatch):
     monkeypatch.setattr(voice.settings, "gemini_api_key", "test-key")
     monkeypatch.setattr(voice.httpx, "Client", MagicMock(return_value=client_mock))
     result = voice.synthesize("Hello!")
+    payload = client_mock.post.call_args.kwargs["json"]
+    assert payload["generationConfig"]["speechConfig"]["voiceConfig"]["prebuiltVoiceConfig"]["voiceName"] == voice.settings.gemini_tts_voice
     assert isinstance(result, list) and len(result) == 1
     wav = base64.b64decode(result[0])
     assert wav[:4] == b"RIFF" and wav[8:12] == b"WAVE"
+
+
+def test_pronunciation_uses_chat_voice_without_creating_chat(client, db, learner, monkeypatch):
+    synthesize = MagicMock(return_value=["d2F2"])
+    monkeypatch.setattr(voice, "synthesize", synthesize)
+    english = lesson_id(db, "english")
+    count = db.query(ChatMessage).count()
+    response = client.post(f"/voice/lessons/{english}/pronounce", json={"text": "  taste  "})
+    assert response.status_code == 200
+    assert response.json() == {"audio": ["d2F2"]}
+    synthesize.assert_called_once_with("taste")
+    assert db.query(ChatMessage).count() == count
+
+    synthesize.reset_mock()
+    for text in ["", "   ", "a" * 241]:
+        assert client.post(f"/voice/lessons/{english}/pronounce", json={"text": text}).status_code == 422
+    assert client.post(f"/voice/lessons/{lesson_id(db, 'science')}/pronounce", json={"text": "taste"}).status_code == 422
+    assert client.post(f"/voice/lessons/{lesson_id(db, 'english', 2)}/pronounce", json={"text": "taste"}).status_code == 403
+    synthesize.assert_not_called()
+    client.headers.pop("Authorization")
+    assert client.post(f"/voice/lessons/{english}/pronounce", json={"text": "taste"}).status_code in (401, 403)
+
+
+def test_pronunciation_reports_audio_failure(client, db, learner, monkeypatch):
+    monkeypatch.setattr(voice, "synthesize", MagicMock(side_effect=HTTPException(502, "Audio unavailable")))
+    response = client.post(f"/voice/lessons/{lesson_id(db, 'english')}/pronounce", json={"text": "taste"})
+    assert response.status_code == 502
+    assert response.json()["detail"] == "Audio unavailable"
+
+
+def test_pronunciation_missing_key_returns_service_unavailable(client, db, learner, monkeypatch):
+    monkeypatch.setattr(voice.settings, "gemini_api_key", "")
+    response = client.post(f"/voice/lessons/{lesson_id(db, 'english')}/pronounce", json={"text": "taste"})
+    assert response.status_code == 503
+    assert "GEMINI_API_KEY" in response.json()["detail"]
 
 
 def test_no_key_is_explicit(monkeypatch):

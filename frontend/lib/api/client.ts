@@ -110,7 +110,21 @@ export const subjectsApi = {
 
 // ── Lessons ───────────────────────────────────────────────────────────────────
 
+export type Rewards = {
+  points: number; badges: number; points_to_badge: number;
+  discounts: number; discount_percent: number; badges_to_discount: number;
+  correct_streak: number; study_seconds: number;
+};
+export type RewardEntry = { id: number; kind: string; points: number; created_at: string };
+export const rewardsApi = {
+  get: () => apiFetch<Rewards>("/me/rewards"),
+  history: (before?: number) => apiFetch<{ events: RewardEntry[]; next_cursor: number | null }>(`/me/rewards/history${before ? `?before=${before}` : ""}`),
+  study: (active: boolean) => apiFetch<Rewards>("/me/rewards/study", { method: "POST", body: JSON.stringify({ active }) }),
+};
+
 export const lessonsApi = {
+  learning: (id: number) => apiFetch<{ learned_steps: number[]; learning_total: number }>(`/lessons/${id}/learning`),
+  saveLearning: (id: number, learned_steps: number[]) => apiFetch<{ learned_steps: number[]; learning_total: number }>(`/lessons/${id}/learning`, { method: "PUT", body: JSON.stringify({ learned_steps }) }),
   restartActivity: (id: number) => apiFetch<ActivityState>(`/lessons/${id}/activity/restart`, { method: "POST" }),
   activity: (id: number, practice = false) => apiFetch<ActivityState>(`/lessons/${id}/activity?practice=${practice}`),
   answerActivity: (id: number, body: ActivityAnswer) => apiFetch<ActivityState>(`/lessons/${id}/activity/answer`, { method: "POST", body: JSON.stringify(body) }),
@@ -216,6 +230,29 @@ export const chatApi = {
     }),
 };
 
+export type QuizSkill = "memorization" | "comprehension" | "application" | "analysis";
+export type GeneratedQuizRun = {
+  id: number; skill: QuizSkill | null; attempt: number | null; quiz_id: number | null;
+  questions: { id: number; body: string; skill_tag: QuizSkill; options: Record<string, string> }[];
+  result: null | {
+    score: number; correct: number; total: number; weakest_skills: QuizSkill[];
+    motivation_points?: number; motivation_message?: string;
+    skill_breakdown: { skill_tag: QuizSkill; correct: number; total: number; accuracy: number }[];
+    results: { question_id: number; given_answer: string; correct_answer: string; is_correct: boolean; explanation: string; skill_tag: QuizSkill }[];
+  };
+};
+export type GeneratedQuizState = { attempts_used: number; max_attempts: number; runs: GeneratedQuizRun[] };
+export const generatedQuizApi = {
+  state: (lessonId: number) => apiFetch<GeneratedQuizState>(`/lessons/${lessonId}/generated-quiz`),
+  start: (lessonId: number, skill?: QuizSkill, quizId?: number) => apiFetch<GeneratedQuizRun>(`/lessons/${lessonId}/generated-quiz/start`, {
+    method: "POST", body: JSON.stringify({ skill, quiz_id: quizId }),
+  }),
+  submit: (lessonId: number, runId: number, answers: { question_id: number; answer: string }[]) =>
+    apiFetch<GeneratedQuizRun>(`/lessons/${lessonId}/generated-quiz/${runId}/submit`, {
+      method: "POST", body: JSON.stringify({ answers }),
+    }),
+};
+
 // ── Math ──────────────────────────────────────────────────────────────────────
 
 export const mathApi = {
@@ -237,6 +274,10 @@ export const mathApi = {
 
 export type VoiceReply = { session_id: number; reply: string; transcript: string; audio: string[]; audio_error: string | null; done: boolean };
 export const voiceApi = {
+  pronounce: (lessonId: number, text: string, signal?: AbortSignal) =>
+    apiFetch<{ audio: string[] }>(`/voice/lessons/${lessonId}/pronounce`, {
+      method: "POST", body: JSON.stringify({ text }), signal,
+    }),
   start: (lessonId: number, signal?: AbortSignal) => apiFetch<VoiceReply>(`/voice/lessons/${lessonId}/start`, { method: "POST", signal }),
   turn: (sessionId: number, audio: Blob, signal?: AbortSignal) => {
     const form = new FormData();

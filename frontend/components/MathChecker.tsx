@@ -2,8 +2,10 @@
 import { useEffect, useRef, useState } from "react";
 import { lessonsApi, mathApi, type QuestionOut } from "@/lib/api";
 import styles from "./SubjectFeature.module.css";
+import { useLearner } from "@/lib/learner-context";
 
 export function MathChecker({ lessonId, onClose }: { lessonId: number; onClose: () => void }) {
+  const { refresh } = useLearner();
   const dialog = useRef<HTMLDialogElement>(null);
   const [questions, setQuestions] = useState<QuestionOut[]>([]);
   const [selected, setSelected] = useState(0);
@@ -25,7 +27,7 @@ export function MathChecker({ lessonId, onClose }: { lessonId: number; onClose: 
     {loading ? <p role="status">جاري تحميل المسائل…</p> : !questions.length ? <p>مفيش مسائل متاحة للدرس ده حاليًا.</p> : <form className={styles.form} onSubmit={async e => {
       e.preventDefault(); if (busy || !answer.trim()) return;
       setBusy(true); setError(""); setResult(null);
-      try { setResult(await mathApi.check(lessonId, selected, answer.trim())); } catch { setError("تعذّر التصحيح. جرّب تاني."); } finally { setBusy(false); }
+      try { setResult(await mathApi.check(lessonId, selected, answer.trim())); void refresh(); } catch { setError("تعذّر التصحيح. جرّب تاني."); } finally { setBusy(false); }
     }}>
       <label>المسألة<select disabled={busy} value={selected} onChange={e => { setSelected(Number(e.target.value)); setResult(null); setAnswer(""); }}>{questions.map((q, i) => <option key={q.id} value={q.id}>مسألة {i + 1}</option>)}</select></label>
       <p className={styles.message} dir="auto">{question?.body}</p>

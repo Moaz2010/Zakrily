@@ -2,6 +2,7 @@ import { TimerProvider } from "@/lib/timer-context";
 import { BottomNav } from "@/components/BottomNav";
 import { TimerModal } from "@/components/TimerModal";
 import { LearnerProvider } from "@/lib/learner-context";
+import { StudyRewards } from "@/components/StudyRewards";
 
 /**
  * App shell layout — wraps all main screens.
@@ -11,6 +12,7 @@ import { LearnerProvider } from "@/lib/learner-context";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <LearnerProvider><TimerProvider>
+      <StudyRewards />
       <div className="phone-shell">
         <main className="pb-24">{children}</main>
         <BottomNav />
