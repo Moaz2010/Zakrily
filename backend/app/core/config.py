@@ -26,7 +26,8 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60 * 24 * 7
 
     anthropic_api_key: str = ""
-    anthropic_model: str = "claude-sonnet-4-6"
+    # Keep quiz generation on Anthropic's lower-cost Haiku tier.
+    anthropic_model: str = "claude-haiku-4-5-20251001"
 
     groq_api_key: str = ""
     groq_model: str = "openai/gpt-oss-120b"

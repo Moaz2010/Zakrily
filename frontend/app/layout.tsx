@@ -1,13 +1,5 @@
 import type { Metadata } from "next";
-import { Noto_Sans_Arabic } from "next/font/google";
 import "./globals.css";
-
-// Arabic-first font — Noto Sans Arabic covers the full Arabic Unicode block.
-const notoSansArabic = Noto_Sans_Arabic({
-  subsets: ["arabic"],
-  variable: "--font-arabic",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "ذاكرلي",
@@ -26,8 +18,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ar" dir="rtl" className={notoSansArabic.variable}>
-      <body className="min-h-screen bg-gray-50 font-[family-name:var(--font-arabic)] antialiased">
+    <html lang="ar" dir="rtl">
+      <body className="min-h-screen bg-gray-50 font-arabic antialiased">
         {children}
       </body>
     </html>
