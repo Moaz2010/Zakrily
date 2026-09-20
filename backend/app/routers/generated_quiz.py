@@ -23,6 +23,7 @@ from app.services.scoring import is_passing
 from app.services import rewards
 
 router = APIRouter(tags=["generated-quiz"])
+QUIZ_VERSION = "content-v2"
 
 
 class StartRequest(BaseModel):
@@ -41,7 +42,7 @@ def bank(db, run):
 
 
 def public_run(db, run):
-    return dict(id=run.id, skill=run.skill, attempt=int(run.slot.split(":")[1]) if not run.skill else None,
+    return dict(id=run.id, skill=run.skill, attempt=int(run.slot.split(":")[-1]) if not run.skill else None,
                 quiz_id=int(run.slot.split(":")[1]) if run.skill else None,
                 questions=[public_question(q, tag) for q, tag in bank(db, run)], result=run.result)
 
@@ -56,7 +57,8 @@ def owned_run(db, user_id, lesson_id, run_id):
 @router.get("/lessons/{lesson_id}/generated-quiz")
 def state(lesson_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     accessible_lesson(db, current_user.id, lesson_id)
-    runs = db.query(GeneratedQuiz).filter_by(user_id=current_user.id, lesson_id=lesson_id).order_by(GeneratedQuiz.id).all()
+    all_runs = db.query(GeneratedQuiz).filter_by(user_id=current_user.id, lesson_id=lesson_id).order_by(GeneratedQuiz.id).all()
+    runs = [r for r in all_runs if r.skill is not None or r.slot.startswith(f"quiz:{QUIZ_VERSION}:")]
     quizzes = [r for r in runs if r.skill is None]
     return dict(attempts_used=len(quizzes), max_attempts=3, runs=[public_run(db, r) for r in runs])
 
@@ -71,13 +73,13 @@ def start(lesson_id: int, payload: StartRequest, current_user: User = Depends(ge
             raise HTTPException(409, "Finish the quiz before starting skill practice")
         slot = f"practice:{parent.id}:{payload.skill.value}"
     else:
-        quizzes = [r for r in runs if r.skill is None]
+        quizzes = [r for r in runs if r.skill is None and r.slot.startswith(f"quiz:{QUIZ_VERSION}:")]
         active = next((r for r in quizzes if r.result is None), None)
         if active:
             return public_run(db, active)
         if len(quizzes) >= 3:
             raise HTTPException(409, "استخدمت المحاولات الثلاث لهذا الدرس. يمكنك متابعة تدريب المهارات.")
-        slot = f"quiz:{len(quizzes) + 1}"
+        slot = f"quiz:{QUIZ_VERSION}:{len(quizzes) + 1}"
     existing = next((r for r in runs if r.slot == slot), None)
     if existing:
         return public_run(db, existing)

@@ -106,6 +106,15 @@ def test_three_attempts_resume_grade_and_practice(client, db, setup_quiz):
     assert not generated_ids.intersection(q["id"] for q in client.get(f"/lessons/{lesson.id}/quiz").json()["questions"])
 
 
+def test_old_quiz_slots_are_not_resumed_after_content_generator_update(client, db, setup_quiz):
+    lesson, user, _ = setup_quiz
+    old = GeneratedQuiz(user_id=user.id, lesson_id=lesson.id, slot="quiz:1", question_ids=[])
+    db.add(old)
+    db.commit()
+    state = client.get(f"/lessons/{lesson.id}/generated-quiz").json()
+    assert state["attempts_used"] == 0
+
+
 def test_generated_quiz_90_percent_gets_higher_motivation_reward(client, db, setup_quiz):
     lesson, user, _ = setup_quiz
     base = f"/lessons/{lesson.id}/generated-quiz"
