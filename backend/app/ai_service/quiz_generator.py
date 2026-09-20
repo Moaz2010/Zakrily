@@ -1,4 +1,4 @@
-"""Generate and validate lesson-grounded multiple-choice assessments with Groq."""
+"""Generate and validate lesson-grounded multiple-choice assessments."""
 import logging
 import re
 from collections import Counter
@@ -72,6 +72,18 @@ def normalize_text(text: str) -> str:
     return " ".join(text.casefold().split())
 
 
+def parse_generated_json(content: str) -> GeneratedSet:
+    """Accept strict JSON plus the fenced JSON Claude sometimes returns."""
+    cleaned = content.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.I | re.S).strip()
+    if not cleaned.startswith("{"):
+        start, end = cleaned.find("{"), cleaned.rfind("}")
+        if start >= 0 and end > start:
+            cleaned = cleaned[start:end + 1]
+    return GeneratedSet.model_validate_json(cleaned)
+
+
 def fallback_generate(sources, *, skill=None, count=15):
     """Create new, lesson-grounded questions when no provider key is configured.
 
@@ -115,7 +127,7 @@ def generate(lesson, subject, sources, *, skill=None, previous=()):
     source_map = select_sources(sources)
     if not source_map:
         raise HTTPException(409, "محتوى الدرس غير جاهز. أضف محتوى الدرس أولًا.")
-    if not settings.groq_api_key:
+    if not settings.anthropic_api_key and not settings.groq_api_key:
         return fallback_generate(sources, skill=skill, count=count)
     target = (f"All questions must use skill '{skill}'." if skill else
               "Include all four skills, aiming for a balanced distribution.")
@@ -138,13 +150,15 @@ def generate(lesson, subject, sources, *, skill=None, previous=()):
         "Copy a short, contiguous quote exactly from its source, including any Markdown formatting. "
         "Do not paraphrase or translate quotes, combine excerpts, or use ellipses."
     )
+    user_content = (
+        f"Subject: {subject.name_en}; lesson: {lesson.title}\n"
+        + "\n\n".join(f"SOURCE {sid}:\n{text}" for sid, text in source_map.items())
+        + "\nPrevious questions to avoid:\n" + "\n".join(previous)[-4000:]
+    )
     payload = {
         "model": settings.groq_model, "max_completion_tokens": 12000,
         "response_format": {"type": "json_object"},
-        "messages": [{"role": "system", "content": system}, {"role": "user", "content":
-            f"Subject: {subject.name_en}; lesson: {lesson.title}\n"
-            + "\n\n".join(f"SOURCE {sid}:\n{text}" for sid, text in source_map.items())
-            + "\nPrevious questions to avoid:\n" + "\n".join(previous)[-4000:]}],
+        "messages": [{"role": "system", "content": system}, {"role": "user", "content": user_content}],
     }
     if settings.groq_model.startswith("openai/gpt-oss"):
         payload["reasoning_effort"] = "low"
@@ -157,10 +171,24 @@ def generate(lesson, subject, sources, *, skill=None, previous=()):
     for attempt in range(2):
         try:
             with httpx.Client(timeout=90.0) as client:
-                response = client.post("https://api.groq.com/openai/v1/chat/completions",
-                                       headers={"Authorization": f"Bearer {settings.groq_api_key}"}, json=payload)
-                response.raise_for_status()
-                result = GeneratedSet.model_validate_json(response.json()["choices"][0]["message"]["content"])
+                if settings.anthropic_api_key:
+                    response = client.post(
+                        "https://api.anthropic.com/v1/messages",
+                        headers={"x-api-key": settings.anthropic_api_key,
+                                 "anthropic-version": "2023-06-01",
+                                 "content-type": "application/json"},
+                        json={"model": settings.anthropic_model, "max_tokens": 12000,
+                              "system": system,
+                              "messages": [{"role": "user", "content": user_content}]},
+                    )
+                    response.raise_for_status()
+                    content = response.json()["content"][0]["text"]
+                else:
+                    response = client.post("https://api.groq.com/openai/v1/chat/completions",
+                                           headers={"Authorization": f"Bearer {settings.groq_api_key}"}, json=payload)
+                    response.raise_for_status()
+                    content = response.json()["choices"][0]["message"]["content"]
+                result = parse_generated_json(content)
             rejected = Counter()
             for item in result.questions:
                 try:
@@ -218,10 +246,13 @@ def generate(lesson, subject, sources, *, skill=None, previous=()):
             logging.getLogger(__name__).warning("Quiz generation attempt %d failed: %s", attempt + 1, err)
 
         if attempt == 0:
-            payload["messages"].append({"role": "user", "content":
-                "The response did not provide enough valid questions. Generate a fresh set covering the requested skills. "
+            user_content += (
+                "\nThe previous response did not provide enough valid questions. Generate a fresh set covering the requested skills. "
                 "Copy source_quote EXACTLY from a single supplied source and use its correct source_id. "
-                "Avoid these already accepted questions:\n" + "\n".join(q.body for q in questions)})
+                "The correct answer must be supported by words in source_quote. "
+                "Avoid these already accepted questions:\n" + "\n".join(q.body for q in questions)
+            )
+            payload["messages"][-1]["content"] = user_content
 
     raise HTTPException(503, "تعذر تجهيز أسئلة موثوقة. حاول مرة أخرى؛ لم تُحسب محاولة.") from last_error
 

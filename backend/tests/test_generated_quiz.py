@@ -22,6 +22,7 @@ from scripts import ingest
 
 @pytest.fixture
 def setup_quiz(db, client, monkeypatch):
+    monkeypatch.setattr(quiz_generator.settings, "anthropic_api_key", "")
     monkeypatch.setattr(ingest, "SessionLocal", sessionmaker(bind=db.get_bind()))
     ingest.ingest_file()
     lesson = db.query(Lesson).join(Subject).filter(Subject.slug == "science", Lesson.order_index == 1).one()
@@ -199,6 +200,32 @@ def test_missing_provider_key_generates_new_questions_from_explanations(db, setu
     assert len({q.body for q in result}) == len(result)
     assert all(q.source_id for q in result)
     assert all(q.correct_answer == "A" for q in result)
+
+
+def test_anthropic_is_preferred_when_configured(db, setup_quiz, monkeypatch):
+    lesson, _, _ = setup_quiz
+    sources = db.query(ContentChunk).filter_by(lesson_id=lesson.id).all()
+    subject = db.get(Subject, lesson.subject_id)
+    template = quiz_generator.GeneratedQuestion(
+        body="Which habitat does the lesson describe?", skill="memorization",
+        options={"A": "Desert", "B": "Ocean", "C": "Forest", "D": "River"}, correct_answer="A",
+        explanation="The lesson supports this answer.", source_id=sources[0].id,
+        source_quote=sources[0].text[:40])
+    content = json.dumps({"questions": [template.model_copy(update={
+        "body": f"Which habitat does the lesson describe? {i}",
+        "skill": list(SkillTagSlug)[i % 4].value,
+    }).model_dump(mode="json") for i in range(15)]})
+    response = httpx.Response(200, json={"content": [{"type": "text", "text": content}]},
+                              request=httpx.Request("POST", "https://api.anthropic.com"))
+    factory = MagicMock()
+    factory.return_value.__enter__.return_value.post.return_value = response
+    monkeypatch.setattr(quiz_generator.httpx, "Client", factory)
+    monkeypatch.setattr(quiz_generator.settings, "anthropic_api_key", "test-anthropic")
+    result = quiz_generator.generate(lesson, subject, sources)
+    assert len(result) == 15
+    request = factory.return_value.__enter__.return_value.post.call_args
+    assert request.args[0] == "https://api.anthropic.com/v1/messages"
+    assert request.kwargs["headers"]["x-api-key"] == "test-anthropic"
 
 
 @pytest.mark.parametrize("count", [10, 16, 20, 35])
