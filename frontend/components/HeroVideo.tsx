@@ -3,8 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "./HeroVideo.module.css";
 
+type FullscreenCapable = HTMLElement & {
+  webkitRequestFullscreen?: () => void;
+};
+
 /**
- * Autoplaying YouTube hero.
+ * Autoplaying YouTube hero, sized for vertical (9:16) source footage.
  *
  * Browsers only allow autoplay when the video starts muted, so it does — and a
  * tap-to-unmute button is layered on top, since a muted hero with no way to
@@ -43,6 +47,17 @@ export function HeroVideo({ youtubeId, title }: { youtubeId: string; title: stri
     command(next ? "mute" : "unMute");
   }
 
+  function goFullscreen() {
+    // Fullscreen the <iframe> itself, not a wrapper — a wrapper still
+    // carrying the vertical box would lock the player to that shape even in
+    // fullscreen. Fullscreening the iframe directly lets YouTube's own
+    // responsive layout size correctly against the real viewport.
+    const el = frame.current as FullscreenCapable | null;
+    if (!el) return;
+    if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  }
+
   return (
     <div className={styles.frame}>
       <div className={styles.ratio}>
@@ -51,10 +66,11 @@ export function HeroVideo({ youtubeId, title }: { youtubeId: string; title: stri
           className={styles.video}
           src={src}
           title={title}
-          allow="autoplay; encrypted-media; picture-in-picture"
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
           allowFullScreen
-          // The iframe is decorative motion behind the copy; the unmute button
-          // is the real control, so keep the frame itself out of the tab order.
+          // The iframe is decorative motion behind the copy; the explicit
+          // controls below are the real interaction, so keep it out of the
+          // tab order.
           tabIndex={-1}
         />
       </div>
@@ -63,26 +79,37 @@ export function HeroVideo({ youtubeId, title }: { youtubeId: string; title: stri
       <div className={styles.scrim} aria-hidden="true" />
 
       {ready && (
-        <button
-          type="button"
-          onClick={toggleSound}
-          className={styles.sound}
-          aria-pressed={!muted}
-          aria-label={muted ? "تشغيل الصوت" : "كتم الصوت"}
-        >
-          {muted ? (
+        <div className={styles.controls}>
+          <button
+            type="button"
+            onClick={toggleSound}
+            className={styles.control}
+            aria-pressed={!muted}
+            aria-label={muted ? "تشغيل الصوت" : "كتم الصوت"}
+          >
+            {muted ? (
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M11 5 6 9H3v6h3l5 4V5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                <path d="m16 9 5 6M21 9l-5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M11 5 6 9H3v6h3l5 4V5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                <path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={goFullscreen}
+            className={styles.control}
+            aria-label="تكبير الفيديو"
+          >
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M11 5 6 9H3v6h3l5 4V5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-              <path d="m16 9 5 6M21 9l-5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M11 5 6 9H3v6h3l5 4V5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-              <path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          )}
-          <span>{muted ? "شغّل الصوت" : "كتم"}</span>
-        </button>
+          </button>
+        </div>
       )}
     </div>
   );

@@ -1,17 +1,19 @@
 .frame {
   position: relative;
+  max-width: 300px;
+  margin-inline: auto;
   border-radius: 26px;
   overflow: hidden;
   background: #101312;
   box-shadow: 0 18px 44px #1e2b2733;
 }
 
-/* Padding-top keeps a stable 16:9 box before the iframe loads, so the page
-   does not jump once the player appears. */
+/* Reserves the box before the iframe loads so the page does not jump.
+   9:16 matches the source footage — a 16:9 box would letterbox it. */
 .ratio {
   position: relative;
   width: 100%;
-  padding-top: 56.25%;
+  padding-top: 177.78%;
 }
 
 .video {
@@ -20,10 +22,6 @@
   width: 100%;
   height: 100%;
   border: 0;
-  /* YouTube letterboxes inside the iframe; scaling up crops the bars away so
-     the hero reads as full-bleed footage rather than an embed. */
-  transform: scale(1.32);
-  transform-origin: center;
   pointer-events: none;
 }
 
@@ -34,36 +32,34 @@
   pointer-events: none;
 }
 
-.sound {
+.controls {
   position: absolute;
   inset-inline-end: 12px;
   inset-block-end: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
   border: 1px solid #ffffff38;
-  border-radius: 999px;
+  border-radius: 50%;
   background: #0f1a17b8;
   backdrop-filter: blur(8px);
   color: #f4f7f4;
-  font-size: 12px;
-  font-weight: 800;
-  font-family: inherit;
   cursor: pointer;
   transition: background .18s ease, transform .18s ease;
 }
 
-.sound:hover { background: #16302ad9; transform: translateY(-1px); }
-.sound:focus-visible { outline: 3px solid #d9a56a; outline-offset: 3px; }
-.sound svg { width: 15px; height: 15px; }
-
-@media (max-width: 380px) {
-  .sound span { display: none; }
-  .sound { padding: 9px; }
-}
+.control:hover { background: #16302ad9; transform: translateY(-1px); }
+.control:focus-visible { outline: 3px solid #d9a56a; outline-offset: 3px; }
+.control svg { width: 17px; height: 17px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .sound { transition: none; }
-  .sound:hover { transform: none; }
+  .control { transition: none; }
+  .control:hover { transform: none; }
 }

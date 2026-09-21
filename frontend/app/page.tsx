@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -75,7 +76,9 @@ export default function LandingPage() {
       <div className={styles.shell}>
         <header className={styles.bar}>
           <div className={styles.brand}>
-            <span className={styles.mark} aria-hidden="true">ذ</span>
+            <span className={styles.mark}>
+              <Image src="/open-book.png" alt="" width={22} height={22} />
+            </span>
             <strong>ذاكريلي</strong>
           </div>
           <Link href="/home" className={styles.signIn}>تسجيل الدخول</Link>
