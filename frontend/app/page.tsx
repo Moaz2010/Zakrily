@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { HeroVideo } from "@/components/HeroVideo";
 import styles from "./landing.module.css";
 
-const HERO_VIDEO_ID = "Yhtkcu3eHQs";
+const HERO_VIDEO_ID = "scQ7RiwEVP0";
 
 const FEATURES = [
   {

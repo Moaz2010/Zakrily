@@ -22,10 +22,14 @@ export function HeroVideo({ youtubeId, title }: { youtubeId: string; title: stri
 
   // `enablejsapi` opens the postMessage channel; `playlist` pointing at the
   // same id is what actually makes `loop` work for a single video.
+  // `modestbranding` and `rel=0` strip as much channel chrome (logo, related
+  // videos from other channels, end-screen suggestions) as YouTube's embed
+  // API allows — it cannot be removed entirely, only minimized.
   const src =
     `https://www.youtube-nocookie.com/embed/${youtubeId}` +
     `?autoplay=1&mute=1&loop=1&playlist=${youtubeId}` +
-    `&controls=0&modestbranding=1&rel=0&playsinline=1&disablekb=1&enablejsapi=1`;
+    `&controls=0&modestbranding=1&rel=0&iv_load_policy=3` +
+    `&playsinline=1&disablekb=1&enablejsapi=1`;
 
   useEffect(() => {
     // Give the player a moment to boot before offering the unmute control;
