@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import { mkdirSync } from "node:fs";
 
-const SRC = "public/Zakrily Logo.png";
+const SRC = "public/zakrily-logo.png";
 const APP = "app";
 const PUB = "public";
 

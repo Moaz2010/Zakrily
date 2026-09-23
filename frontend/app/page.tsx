@@ -76,7 +76,7 @@ export default function LandingPage() {
       <div className={styles.shell}>
         <header className={styles.bar}>
           <div className={styles.brand}>
-            <Image src="/Zakrily Logo.png" alt="ذاكريلي" width={40} height={40} className={styles.mark} priority />
+            <Image src="/zakrily-logo.png" alt="ذاكريلي" width={40} height={40} className={styles.mark} priority />
             <strong>ذاكريلي</strong>
           </div>
           <Link href="/home" className={styles.signIn}>تسجيل الدخول</Link>
