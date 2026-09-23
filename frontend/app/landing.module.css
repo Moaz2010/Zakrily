@@ -22,14 +22,9 @@
 
 .brand { display: flex; align-items: center; gap: 9px; }
 .mark {
-  display: grid;
-  place-items: center;
-  width: 38px; height: 38px;
+  width: 40px; height: 40px;
   border-radius: 13px;
-  background: var(--color-science);
-  color: #fff;
-  font-size: 19px;
-  box-shadow: 0 5px 14px #1e5c4a40;
+  box-shadow: 0 5px 14px #1e5c4a33;
 }
 .brand strong { font-size: 18px; font-weight: 900; letter-spacing: -.2px; }
 
