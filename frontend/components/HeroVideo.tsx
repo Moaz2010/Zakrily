@@ -25,10 +25,12 @@ export function HeroVideo({ youtubeId, title }: { youtubeId: string; title: stri
   // `modestbranding` and `rel=0` strip as much channel chrome (logo, related
   // videos from other channels, end-screen suggestions) as YouTube's embed
   // API allows — it cannot be removed entirely, only minimized.
+  // `cc_load_policy=0` turns off auto-displayed captions, which otherwise
+  // show as text overlaid on the footage even with controls hidden.
   const src =
     `https://www.youtube-nocookie.com/embed/${youtubeId}` +
     `?autoplay=1&mute=1&loop=1&playlist=${youtubeId}` +
-    `&controls=0&modestbranding=1&rel=0&iv_load_policy=3` +
+    `&controls=0&modestbranding=1&rel=0&iv_load_policy=3&cc_load_policy=0` +
     `&playsinline=1&disablekb=1&enablejsapi=1`;
 
   useEffect(() => {
